@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Application Under Review</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+<link rel="stylesheet" href="../css/pending-approval.css">
+</head>
+<body>
+<div id="app">
+  <div class="fullscreen center">
+    <div class="card card-hi" style="padding:32px 22px;">
+      <div class="pending-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--yellow-deep)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </div>
+      <h2 style="margin:16px 0 8px;">Your application is under review</h2>
+      <p class="muted" style="font-size:13.5px;margin-bottom:6px;">
+        We're verifying your details. This usually takes 24–48 hours.
+      </p>
+      <p class="muted" style="font-size:12.5px;margin-bottom:22px;">
+        Need help? <a href="#" id="support-link" style="color:var(--green-dim);font-weight:600;">Contact support</a>
+      </p>
+      <button class="btn btn-outline" id="refresh-status-btn">Check status</button>
+      <button class="btn-danger-text" id="logout-btn" style="margin-top:16px;">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js" async defer onerror="console.warn('Socket.io script failed to load — realtime features disabled')"></script>
+<script src="../js/delivery-mock.js"></script>
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-auth.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/delivery-socket.js"></script>
+<script src="../js/pending-approval.js"></script>
+</body>
+</html>

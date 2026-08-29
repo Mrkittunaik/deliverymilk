@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Account Blocked</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+</head>
+<body>
+<div id="app">
+  <div class="fullscreen center">
+    <div class="card" style="padding:32px 22px;border-color:#F4C7BC;">
+      <div class="blocked-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.9 4.9l14.2 14.2"/></svg>
+      </div>
+      <h2 style="margin:16px 0 8px;color:var(--danger);">Account blocked</h2>
+      <p class="muted" style="font-size:13.5px;margin-bottom:6px;">
+        Your delivery partner account has been blocked. This may be due to a policy violation or pending verification issue.
+      </p>
+      <p class="muted" style="font-size:12.5px;margin-bottom:22px;">
+        Contact support if you think this is a mistake: <a href="mailto:support@example.com" style="color:var(--green-dim);font-weight:600;">support@example.com</a>
+      </p>
+      <button class="btn btn-danger" id="logout-btn">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/delivery-mock.js"></script>
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-auth.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/blocked.js"></script>
+</body>
+</html>

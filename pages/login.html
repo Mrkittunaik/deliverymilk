@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Delivery Partner Login</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+<link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+<div id="app">
+  <div class="fullscreen">
+    <div class="logo-row">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2h5l.6 3.2c.1.5.4.9.8 1.2A5 5 0 0 1 18 10.5V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9.5a5 5 0 0 1 2.1-4.1c.4-.3.7-.7.8-1.2L9.5 2z"/><path d="M8 13h8"/></svg>
+      </span>
+      <span class="brand">Delivery Partner</span>
+    </div>
+
+    <h2 style="margin-bottom:6px;">Welcome back</h2>
+    <p class="muted" style="margin-bottom:26px;font-size:13.5px;">Login with your registered mobile number</p>
+
+    <!-- Step 1: phone -->
+    <div id="phone-step">
+      <div class="field">
+        <label>Mobile number</label>
+        <input type="tel" id="phone-input" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric">
+      </div>
+      <button class="btn btn-primary" id="send-otp-btn">
+        <span class="btn-label">Send OTP</span>
+      </button>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div id="otp-step" class="hidden">
+      <p class="muted" style="font-size:13px;margin-bottom:14px;">Enter the 6-digit code sent to <span id="otp-phone-display"></span></p>
+      <div class="otp-row">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+        <input class="otp-box" maxlength="1" inputmode="numeric">
+      </div>
+      <button class="btn btn-primary" id="verify-otp-btn">
+        <span class="btn-label">Verify</span>
+      </button>
+      <button class="btn-danger-text" id="change-number-btn" style="margin-top:14px;width:100%;text-align:center;">Change number</button>
+    </div>
+
+    <p class="center muted" style="margin-top:22px;font-size:13.5px;">
+      New delivery partner? <a href="signup.html" data-transition style="color:var(--green-dim);font-weight:600;">Sign up</a>
+    </p>
+
+    <!-- TEMPORARY: demo login, no backend needed. Remove this block when going live. -->
+    <div class="divider-text">— or —</div>
+    <button class="btn btn-outline" id="demo-login-btn">Skip login (demo mode)</button>
+  </div>
+</div>
+
+<script src="../js/delivery-mock.js"></script>
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/login.js"></script>
+</body>
+</html>

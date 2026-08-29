@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Account</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+<link rel="stylesheet" href="../css/account.css">
+</head>
+<body>
+<div id="app">
+  <div class="content">
+
+    <div class="card acc-profile-card">
+      <label class="acc-avatar" id="acc-avatar-upload">
+        <img id="acc-avatar-img" src="../images/avatar-placeholder.png" alt="avatar" onerror="this.style.display='none'">
+        <input type="file" id="acc-avatar-file" accept="image/*" class="hidden">
+      </label>
+      <div class="acc-name" id="acc-name-display">—</div>
+      <div class="acc-phone muted" id="acc-phone-display">—</div>
+      <span class="status-pill accepted" id="acc-status-badge">Approved</span>
+
+      <div class="acc-stats-row">
+        <div class="acc-stat">
+          <div class="acc-stat-num" id="acc-total-orders">0</div>
+          <div class="acc-stat-label">Delivered</div>
+        </div>
+        <div class="acc-stat">
+          <div class="acc-stat-num" id="acc-rating">--</div>
+          <div class="acc-stat-label">Rating</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card acc-row">
+      <div>
+        <div class="acc-row-title">Available for orders</div>
+        <div class="acc-row-sub muted">Temporarily pause new order requests</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="availability-toggle">
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <div class="card" id="edit-profile-card">
+      <div class="acc-row-title" style="margin-bottom:12px;">Edit profile</div>
+      <div id="edit-profile-view">
+        <button class="btn btn-outline" id="edit-profile-btn">Edit profile</button>
+      </div>
+      <form id="edit-profile-form" class="hidden">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" id="edit-name-input">
+        </div>
+        <button type="submit" class="btn btn-primary" id="save-profile-btn">
+          <span class="btn-label">Save changes</span>
+        </button>
+        <button type="button" class="btn-danger-text" id="cancel-edit-btn" style="margin-top:12px;width:100%;text-align:center;">Cancel</button>
+      </form>
+    </div>
+
+    <button class="btn-danger-text" id="logout-btn" style="width:100%;text-align:center;padding:14px;">Logout</button>
+
+    <!-- TEMPORARY: shown only while demo mode is on. Remove when backend is connected. -->
+    <p class="center muted" id="demo-mode-banner" style="font-size:12px;margin-top:10px;display:none;">
+      Demo mode is on — <a href="#" id="exit-demo-link" style="color:var(--green-dim);font-weight:600;">exit</a>
+    </p>
+  </div>
+</div>
+
+<script src="../js/delivery-mock.js"></script>
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-auth.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-layout.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/account.js"></script>
+</body>
+</html>
