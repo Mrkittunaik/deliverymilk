@@ -209,6 +209,39 @@
   .swipe-thumb.snapping{transition:left .25s cubic-bezier(.22,.9,.3,1);}
   .swipe-track.complete .swipe-label{color:#fff;}
 
+  /* ---------- PROOF OF DELIVERY MODAL ---------- */
+  .pod-backdrop{position:absolute; inset:0; background:rgba(43,36,16,.55); z-index:80; display:none; align-items:flex-end; justify-content:center;}
+  .pod-backdrop.show{display:flex; animation:fadeIn .2s ease;}
+  .pod-sheet{background:var(--card); width:100%; max-width:480px; border-radius:16px 16px 0 0; padding:20px 20px 26px; animation:slideUp .28s cubic-bezier(.22,.9,.3,1); max-height:90vh; overflow-y:auto;}
+  .pod-sheet h3{margin:0 0 4px; font-size:16px; font-weight:800;}
+  .pod-sub{font-size:12px; color:var(--muted); margin-bottom:16px; line-height:1.5;}
+  .pod-photo-box{
+    width:100%; aspect-ratio:4/3; border-radius:10px; border:1.5px dashed var(--line); background:var(--card-hi);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted);
+    cursor:pointer; overflow:hidden; position:relative; margin-bottom:14px;
+  }
+  .pod-photo-box img{width:100%; height:100%; object-fit:cover;}
+  .pod-photo-box .pod-photo-label{font-size:12px; font-weight:700;}
+  .pod-photo-box.has-photo{border-style:solid; border-color:var(--green);}
+  .pod-photo-badge{position:absolute; top:8px; left:8px; background:var(--green); color:#fff; font-size:9.5px; font-weight:800; padding:4px 8px; border-radius:5px; display:flex; align-items:center; gap:4px;}
+  .pod-or{text-align:center; font-size:10.5px; font-weight:800; color:var(--muted); letter-spacing:.5px; margin:2px 0 12px;}
+  .pod-remark textarea{width:100%; padding:11px 13px; border-radius:8px; border:1.5px solid var(--line); font-size:13px; font-family:inherit; color:var(--ink); background:var(--card-hi); outline:none; resize:vertical; min-height:70px;}
+  .pod-remark textarea:focus{border-color:var(--yellow-deep);}
+  .pod-remark label{display:block; font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:6px;}
+
+  /* ---------- ROUTE / ZONE BANNER (home) ---------- */
+  .route-banner{background:linear-gradient(150deg,var(--green-light),var(--card)); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; gap:12px;}
+  .route-banner .ric{width:38px; height:38px; border-radius:10px; background:var(--green); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .route-banner .rtxt{flex:1; min-width:0;}
+  .route-banner .rtitle{font-size:12.5px; font-weight:800;}
+  .route-banner .rsub{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  .route-order-num{
+    width:22px; height:22px; border-radius:50%; background:var(--yellow); color:#231C08; font-size:10.5px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .cust-card.next-up{border:1.5px solid var(--yellow-deep); box-shadow:0 4px 14px rgba(232,164,0,.18);}
+
   /* ---------- MINI CUSTOMER CARDS (upcoming / list) ---------- */
   .cust-card{
     background:var(--card); border:1px solid var(--line); border-radius:10px; padding:13px;
@@ -675,6 +708,14 @@
 
     <div id="heroWrap"></div>
 
+    <div class="route-banner" id="routeBanner" style="display:none;">
+      <div class="ric"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>
+      <div class="rtxt">
+        <div class="rtitle">Stops in your zone today</div>
+        <div class="rsub">Sorted nearest first</div>
+      </div>
+    </div>
+
     <div class="section-head">
       <div class="section-title">Up <span>Next</span></div>
       <div class="section-link" data-goto="deliveries">See all
@@ -820,6 +861,29 @@
     <button class="success-cta" id="successDoneBtn">Back to Home</button>
   </div>
 
+  <!-- ================= PROOF OF DELIVERY MODAL ================= -->
+  <div class="pod-backdrop" id="podBackdrop">
+    <div class="pod-sheet">
+      <h3>Confirm Delivery</h3>
+      <div class="pod-sub">Take a photo of the empty bottles collected, or add a remark if none were given.</div>
+
+      <div class="pod-photo-box" id="podPhotoBox">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <div class="pod-photo-label">Tap to capture empty bottle photo</div>
+      </div>
+
+      <div class="pod-or">— OR —</div>
+
+      <div class="pod-remark">
+        <label>Add a Remark (if no bottles given)</label>
+        <textarea id="podRemarkInput" placeholder="e.g. Customer wasn't home, left with security / No empty bottle given today"></textarea>
+      </div>
+
+      <button class="cta-solid" style="width:100%; margin-top:16px;" id="podConfirmBtn">Confirm &amp; Complete Delivery</button>
+      <button class="ghost-btn" style="width:100%; justify-content:center; margin-top:8px;" id="podCancelBtn">Cancel</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 
@@ -832,14 +896,25 @@ function colorFor(i){ return AVATAR_COLORS[i % AVATAR_COLORS.length]; }
 function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
 
 let orders = [
-  { id:'PD-2291', name:'Anjali Reddy', phone:'+91 98765 43210', area:'Kittu Nagar, Kondapur', addr:'Flat 402, Sri Sai Residency, Kittu Nagar Main Rd, Kondapur, Hyderabad – 500084', instr:'Leave with the security guard if gate is locked.', items:['Full Cream Milk x2','Curd 500g x1'], amount:210, payment:'COD', distance:'0.9 km', eta:'6 min', status:'ongoing', step:2 },
-  { id:'PD-2292', name:'Vikram Sharma', phone:'+91 91234 56780', area:'HITEC City', addr:'H.No 8-3-1122, Green Meadows Apartments, HITEC City, Hyderabad – 500081', instr:'Ring the bell twice, dog in the house.', items:['Toned Milk x1','Paneer 200g x1','Ghee 500ml x1'], amount:485, payment:'Prepaid', distance:'1.6 km', eta:'11 min', status:'pending', step:0 },
-  { id:'PD-2293', name:'Fatima Sheikh', phone:'+91 90000 11223', area:'Gachibowli', addr:'Plot 44, Nest Enclave, Gachibowli, Hyderabad – 500032', instr:'Call before arriving, no bell.', items:['Buffalo Milk x1'], amount:70, payment:'COD', distance:'2.3 km', eta:'15 min', status:'pending', step:0 },
-  { id:'PD-2294', name:'Karthik Iyer', phone:'+91 99887 76655', area:'Madhapur', addr:'3-6-77, Ayyappa Society, Madhapur, Hyderabad – 500081', instr:'', items:['Full Cream Milk x1','Butter 100g x1'], amount:165, payment:'Prepaid', distance:'3.1 km', eta:'18 min', status:'delivered', step:3 },
-  { id:'PD-2295', name:'Sneha Rao', phone:'+91 98123 45566', area:'Kondapur', addr:'Flat 12B, Manjeera Trinity, Kondapur, Hyderabad – 500084', instr:'Behind the temple, blue gate.', items:['Toned Milk x2','Curd 500g x2'], amount:240, payment:'COD', distance:'0.6 km', eta:'4 min', status:'delivered', step:3 },
+  { id:'PD-2291', name:'Anjali Reddy', phone:'+91 98765 43210', area:'Kittu Nagar, Kondapur', addr:'Flat 402, Sri Sai Residency, Kittu Nagar Main Rd, Kondapur, Hyderabad – 500084', instr:'Leave with the security guard if gate is locked.', items:['Full Cream Milk x2','Curd 500g x1'], amount:210, payment:'COD', distanceKm:0.9, eta:'6 min', status:'ongoing', step:2, zone:'Kondapur Zone', proof:null },
+  { id:'PD-2295', name:'Sneha Rao', phone:'+91 98123 45566', area:'Kondapur', addr:'Flat 12B, Manjeera Trinity, Kondapur, Hyderabad – 500084', instr:'Behind the temple, blue gate.', items:['Toned Milk x2','Curd 500g x2'], amount:240, payment:'COD', distanceKm:0.6, eta:'4 min', status:'pending', step:0, zone:'Kondapur Zone', proof:null },
+  { id:'PD-2292', name:'Vikram Sharma', phone:'+91 91234 56780', area:'HITEC City', addr:'H.No 8-3-1122, Green Meadows Apartments, HITEC City, Hyderabad – 500081', instr:'Ring the bell twice, dog in the house.', items:['Toned Milk x1','Paneer 200g x1','Ghee 500ml x1'], amount:485, payment:'Prepaid', distanceKm:1.6, eta:'11 min', status:'pending', step:0, zone:'HITEC City Zone', proof:null },
+  { id:'PD-2293', name:'Fatima Sheikh', phone:'+91 90000 11223', area:'Gachibowli', addr:'Plot 44, Nest Enclave, Gachibowli, Hyderabad – 500032', instr:'Call before arriving, no bell.', items:['Buffalo Milk x1'], amount:70, payment:'COD', distanceKm:2.3, eta:'15 min', status:'pending', step:0, zone:'Gachibowli Zone', proof:null },
+  { id:'PD-2294', name:'Karthik Iyer', phone:'+91 99887 76655', area:'Madhapur', addr:'3-6-77, Ayyappa Society, Madhapur, Hyderabad – 500081', instr:'', items:['Full Cream Milk x1','Butter 100g x1'], amount:165, payment:'Prepaid', distanceKm:3.1, eta:'18 min', status:'delivered', step:3, zone:'Madhapur Zone', proof:{type:'remark', text:'No empty bottle given today'} },
 ];
 
 const STEP_LABELS = ['Accepted','Picked Up','On the Way','Delivered'];
+
+/* =========================================================
+   NEAREST-FIRST ROUTE SEQUENCING (within this rider's zone)
+   Orders auto-sort by distance so the closest stop is always
+   shown first — mirrors the equal-split zone clustering set
+   by the admin panel for the day.
+========================================================= */
+function distanceLabel(km){ return km.toFixed(1) + ' km'; }
+function sortedPendingQueue(){
+  return orders.filter(o=>o.status==='pending').sort((a,b)=>a.distanceKm-b.distanceKm);
+}
 
 /* =========================================================
    NAV / SCREEN SWITCHING
@@ -928,7 +1003,7 @@ function renderHero(){
             <div class="cust-name">${active.name}</div>
             <div class="cust-addr">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span>${active.area} &middot; ${active.distance}</span>
+              <span>${active.area} &middot; ${distanceLabel(active.distanceKm)}</span>
             </div>
           </div>
           <div class="cust-actions">
@@ -1016,7 +1091,7 @@ function initSwipe(orderId){
       setPos(max());
       track.classList.add('complete');
       label.textContent = 'Delivered ✓';
-      setTimeout(()=> completeDelivery(orderId), 350);
+      setTimeout(()=> openProofOfDelivery(orderId), 350);
     } else {
       setPos(0);
     }
@@ -1029,16 +1104,75 @@ function initSwipe(orderId){
   window.addEventListener('touchend', pointerUp);
 }
 
-function completeDelivery(orderId){
+function completeDelivery(orderId, proof){
   const o = orders.find(x=>x.id===orderId);
   if(!o) return;
   o.status = 'delivered';
   o.step = 3;
-  document.getElementById('successSub').textContent = `${o.name}'s order has been marked delivered. Payment: ${o.payment==='COD' ? '₹'+o.amount+' collected (COD)' : 'Already paid online'}.`;
+  o.proof = proof || null;
+  const proofNote = proof && proof.type==='photo' ? ' Empty bottle photo uploaded.' : (proof && proof.type==='remark' ? ' Remark added (no bottle given).' : '');
+  document.getElementById('successSub').textContent = `${o.name}'s order has been marked delivered. Payment: ${o.payment==='COD' ? '₹'+o.amount+' collected (COD)' : 'Already paid online'}.${proofNote}`;
   document.getElementById('successOverlay').classList.add('show');
   closeDetail();
   renderAll();
 }
+
+/* =========================================================
+   PROOF OF DELIVERY (photo of empty bottles, or remark)
+========================================================= */
+let podOrderId = null;
+let podPhotoData = null;
+
+function openProofOfDelivery(orderId){
+  podOrderId = orderId;
+  podPhotoData = null;
+  document.getElementById('podPhotoBox').classList.remove('has-photo');
+  document.getElementById('podPhotoBox').innerHTML = `
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <div class="pod-photo-label">Tap to capture empty bottle photo</div>
+    <input type="file" accept="image/*" capture="environment" id="podFileInput" style="display:none;">`;
+  bindPodFileInput();
+  document.getElementById('podRemarkInput').value = '';
+  document.getElementById('podBackdrop').classList.add('show');
+}
+function closeProofOfDelivery(){
+  document.getElementById('podBackdrop').classList.remove('show');
+  podOrderId = null;
+}
+function bindPodFileInput(){
+  const box = document.getElementById('podPhotoBox');
+  const input = document.getElementById('podFileInput');
+  box.onclick = ()=> input.click();
+  input.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      podPhotoData = ev.target.result;
+      box.classList.add('has-photo');
+      box.innerHTML = `<div class="pod-photo-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>Captured & auto-uploaded</div><img src="${ev.target.result}" alt="Empty bottle proof">`;
+      showToast('Photo captured — uploading automatically');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById('podCancelBtn').addEventListener('click', closeProofOfDelivery);
+document.getElementById('podBackdrop').addEventListener('click', (e)=>{
+  if(e.target.id==='podBackdrop') closeProofOfDelivery();
+});
+document.getElementById('podConfirmBtn').addEventListener('click', ()=>{
+  const remark = document.getElementById('podRemarkInput').value.trim();
+  if(!podPhotoData && !remark){
+    showToast('Add a photo or a remark to continue');
+    return;
+  }
+  const proof = podPhotoData
+    ? {type:'photo', data:podPhotoData}
+    : {type:'remark', text:remark};
+  const orderId = podOrderId;
+  closeProofOfDelivery();
+  completeDelivery(orderId, proof);
+});
 document.getElementById('successDoneBtn').addEventListener('click', ()=>{
   document.getElementById('successOverlay').classList.remove('show');
   goToScreen('home');
@@ -1047,17 +1181,17 @@ document.getElementById('successDoneBtn').addEventListener('click', ()=>{
 /* =========================================================
    RENDER: UP NEXT (home) + DELIVERIES LIST
 ========================================================= */
-function customerCardHTML(o, idx){
+function customerCardHTML(o, idx, queuePos){
   return `
-    <div class="cust-card" onclick="openDetail('${o.id}')">
+    <div class="cust-card ${queuePos===1?'next-up':''}" onclick="openDetail('${o.id}')">
       <div class="cc-top">
-        <div class="cc-avatar" style="background:${colorFor(idx)};">${initials(o.name)}</div>
+        ${queuePos ? `<div class="route-order-num">${queuePos}</div>` : `<div class="cc-avatar" style="background:${colorFor(idx)};">${initials(o.name)}</div>`}
         <div class="cc-info">
           <div class="cc-name">${o.name}</div>
-          <div class="cc-sub">${o.id} &middot; ${o.items.length} item${o.items.length>1?'s':''}</div>
+          <div class="cc-sub">${o.id} &middot; ${o.items.length} item${o.items.length>1?'s':''} &middot; ${o.zone||''}</div>
         </div>
         <div class="cc-dist">
-          <div class="d">${o.distance}</div>
+          <div class="d">${distanceLabel(o.distanceKm)}</div>
           <div class="t">${o.eta}</div>
         </div>
       </div>
@@ -1073,8 +1207,21 @@ function customerCardHTML(o, idx){
 }
 
 function renderUpNext(){
-  const list = orders.filter(o=>o.status==='pending').slice(0,3);
+  const queue = sortedPendingQueue();
+  const list = queue.slice(0,3);
   const el = document.getElementById('upNextList');
+
+  const banner = document.getElementById('routeBanner');
+  if(banner){
+    if(queue.length>0){
+      banner.style.display = 'flex';
+      banner.querySelector('.rtitle').textContent = `${queue.length} stop${queue.length>1?'s':''} in your zone today`;
+      banner.querySelector('.rsub').textContent = `Sorted nearest first — starting with ${queue[0].name} (${distanceLabel(queue[0].distanceKm)})`;
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
   if(list.length===0){
     el.innerHTML = `<div class="empty-state" style="padding:30px 10px;">
       <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg>
@@ -1085,14 +1232,20 @@ function renderUpNext(){
   }
   el.innerHTML = list.map((o,i)=>{
     const idx = orders.findIndex(x=>x.id===o.id);
-    return `<div style="animation-delay:${i*70}ms;">${customerCardHTML(o, idx)}</div>`;
+    return `<div style="animation-delay:${i*70}ms;">${customerCardHTML(o, idx, i+1)}</div>`;
   }).join('');
 }
 
 let currentFilter = 'all';
 function renderDeliveries(){
   const el = document.getElementById('deliveriesList');
-  const list = orders.filter(o => currentFilter==='all' ? true : o.status===currentFilter);
+  let list = orders.filter(o => currentFilter==='all' ? true : o.status===currentFilter);
+  const showQueue = currentFilter==='all' || currentFilter==='pending';
+  if(showQueue){
+    const pending = [...list].filter(o=>o.status==='pending').sort((a,b)=>a.distanceKm-b.distanceKm);
+    const rest = list.filter(o=>o.status!=='pending');
+    list = [...pending, ...rest];
+  }
   if(list.length===0){
     el.innerHTML = `<div class="empty-state">
       <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.6"><rect x="3" y="7" width="13" height="10" rx="1"/><path d="M16 10h3l3 3v4h-6z"/></svg>
@@ -1101,9 +1254,11 @@ function renderDeliveries(){
     </div>`;
     return;
   }
+  let pendingCounter = 0;
   el.innerHTML = list.map((o,i)=>{
     const idx = orders.findIndex(x=>x.id===o.id);
-    return `<div style="animation-delay:${i*60}ms;">${customerCardHTML(o, idx)}</div>`;
+    const qpos = (showQueue && o.status==='pending') ? (++pendingCounter) : null;
+    return `<div style="animation-delay:${i*60}ms;">${customerCardHTML(o, idx, qpos)}</div>`;
   }).join('');
 }
 document.querySelectorAll('#filterRow .cat-chip').forEach(chip=>{
@@ -1142,7 +1297,7 @@ function openDetail(orderId){
       <div class="map-route"></div>
       <div class="map-pin me"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></div>
       <div class="map-pin dest"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/></svg></div>
-      <div class="map-badge">${o.distance} &middot; ${o.eta}</div>
+      <div class="map-badge">${distanceLabel(o.distanceKm)} &middot; ${o.eta}</div>
     </div>
 
     <div class="detail-block">
@@ -1193,6 +1348,14 @@ function openDetail(orderId){
       </div>
     </div>` : ''}
 
+    ${o.status === 'delivered' && o.proof ? `
+    <div class="detail-block">
+      <div class="db-title">Delivery Proof</div>
+      ${o.proof.type==='photo'
+        ? `<img src="${o.proof.data}" alt="Empty bottle proof" style="width:100%; border-radius:8px; display:block;">`
+        : `<div class="instr-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>${o.proof.text}</span></div>`}
+    </div>` : ''}
+
     <div class="detail-cta-row">
       <button class="cta-outline" onclick="navigateTo('${o.name}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -1202,7 +1365,7 @@ function openDetail(orderId){
         ? `<button class="cta-solid" style="background:var(--muted); box-shadow:none;" disabled>Already Delivered</button>`
         : o.status === 'pending'
           ? `<button class="cta-solid" onclick="acceptOrder('${o.id}')">Accept Delivery</button>`
-          : `<button class="cta-solid" onclick="completeDelivery('${o.id}')">Mark Delivered</button>`}
+          : `<button class="cta-solid" onclick="openProofOfDelivery('${o.id}')">Mark Delivered</button>`}
     </div>
     ${o.status !== 'delivered' ? `<div class="report-link" onclick="showToast('Issue reported to support')">Report an issue with this delivery</div>` : ''}
   `;
