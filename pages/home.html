@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Available Orders</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+<link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+<div id="app">
+  <div class="content">
+    <div class="refresh-row">
+      <div class="section-title" style="margin-bottom:0;">Available orders</div>
+      <button class="btn-icon" id="refresh-btn" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+    </div>
+
+    <div id="limit-banner" class="banner hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <span>Complete an active order to see new ones</span>
+    </div>
+
+    <div id="pool-list"></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="../js/delivery-mock.js"></script>
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-auth.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-layout.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/delivery-socket.js"></script>
+<script src="../js/home.js"></script>
+</body>
+</html>

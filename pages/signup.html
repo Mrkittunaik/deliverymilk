@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Delivery Partner Signup</title>
+<link rel="stylesheet" href="../css/delivery-base.css">
+<link rel="stylesheet" href="../css/delivery-components.css">
+<link rel="stylesheet" href="../css/signup.css">
+</head>
+<body>
+<div id="app">
+  <div class="fullscreen" style="justify-content:flex-start;padding-top:36px;">
+    <div class="logo-row">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2h5l.6 3.2c.1.5.4.9.8 1.2A5 5 0 0 1 18 10.5V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9.5a5 5 0 0 1 2.1-4.1c.4-.3.7-.7.8-1.2L9.5 2z"/><path d="M8 13h8"/></svg>
+      </span>
+      <span class="brand">Delivery Partner</span>
+    </div>
+
+    <h2 style="margin-bottom:4px;">Join as a delivery partner</h2>
+    <p class="muted" style="margin-bottom:22px;font-size:13.5px;">Fill in your details to apply</p>
+
+    <label for="photo-file" class="photo-upload" id="photo-upload">
+      <img id="photo-preview" class="hidden" alt="preview">
+      <svg id="photo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </label>
+    <input type="file" id="photo-file" accept="image/*" class="hidden">
+
+    <form id="signup-form">
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="name-input" placeholder="Your full name" required>
+      </div>
+      <div class="field">
+        <label>Mobile number</label>
+        <input type="tel" id="phone-input" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric" required>
+      </div>
+      <div class="field">
+        <label>Email (optional)</label>
+        <input type="email" id="email-input" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password-input" placeholder="Create a password" required>
+      </div>
+      <div class="field">
+        <label>Vehicle type (optional)</label>
+        <select id="vehicle-input">
+          <option value="">Select vehicle</option>
+          <option value="bike">Bike</option>
+          <option value="cycle">Cycle</option>
+          <option value="van">Van</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        <span class="btn-label">Submit application</span>
+      </button>
+    </form>
+
+    <p class="center muted" style="margin-top:20px;font-size:13.5px;">
+      Already a partner? <a href="login.html" data-transition style="color:var(--green-dim);font-weight:600;">Log in</a>
+    </p>
+  </div>
+</div>
+
+<script src="../js/delivery-api.js"></script>
+<script src="../js/delivery-ui-helpers.js"></script>
+<script src="../js/delivery-transitions.js"></script>
+<script src="../js/signup.js"></script>
+</body>
+</html>

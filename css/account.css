@@ -1,0 +1,30 @@
+.acc-profile-card{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:26px 18px;
+}
+.acc-avatar{
+  width:76px;height:76px;border-radius:50%;
+  overflow:hidden;
+  background:var(--card-hi);
+  border:2px solid var(--line);
+  margin-bottom:12px;
+  cursor:pointer;
+  display:block;
+}
+.acc-avatar img{width:100%;height:100%;object-fit:cover;}
+
+.acc-name{font-size:17px;font-weight:700;margin-bottom:2px;}
+.acc-phone{font-size:13px;margin-bottom:10px;}
+
+.acc-stats-row{
+  display:flex;gap:28px;margin-top:18px;
+}
+.acc-stat{text-align:center;}
+.acc-stat-num{font-size:19px;font-weight:700;}
+.acc-stat-label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+.acc-row{
+  display:flex;justify-content:space-between;align-items:center;
+}
+.acc-row-title{font-weight:600;font-size:14.5px;}
+.acc-row-sub{font-size:12px;margin-top:2px;}

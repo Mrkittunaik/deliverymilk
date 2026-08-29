@@ -1,0 +1,36 @@
+.dt-header{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
+}
+.dt-name-row{display:flex;align-items:center;gap:10px;}
+.dt-name{font-weight:700;font-size:17px;}
+
+.dt-address{
+  font-size:13.5px;line-height:1.55;
+  margin-top:6px;
+}
+.dt-address .addr-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;letter-spacing:.3px;}
+
+.dt-items{margin-top:4px;}
+.dt-item-row{
+  display:flex;justify-content:space-between;
+  font-size:13.5px;padding:8px 0;
+  border-bottom:1px solid var(--line);
+}
+.dt-item-row:last-child{border-bottom:none;}
+.dt-item-qty{color:var(--muted);margin-right:6px;}
+
+.dt-amount-row{
+  display:flex;justify-content:space-between;
+  font-size:13.5px;padding:5px 0;
+}
+.dt-amount-row.total{
+  font-weight:700;font-size:15px;
+  border-top:1px solid var(--line);
+  margin-top:6px;padding-top:10px;
+}
+
+.dt-actions{
+  display:flex;flex-direction:column;gap:10px;margin-top:16px;
+}
+
+.map-btn svg{width:16px;height:16px;}

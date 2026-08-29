@@ -1,0 +1,6 @@
+#phone-input{
+  letter-spacing:1px;
+}
+.otp-box:focus{
+  transform:scale(1.03);
+}
