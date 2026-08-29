@@ -454,9 +454,191 @@
   .empty-sub{font-size:12px; max-width:220px; line-height:1.4;}
 
   ::-webkit-scrollbar{width:0;}
+
+  /* =========================================================
+     AUTH FLOW — splash / login / otp
+  ========================================================= */
+  #authOverlay{
+    position:fixed; inset:0; z-index:200; max-width:480px; margin:0 auto;
+    background:var(--bg); display:flex; flex-direction:column;
+  }
+  .auth-view{
+    flex:1; display:none; flex-direction:column; padding:32px 26px; position:relative; overflow:hidden;
+  }
+  .auth-view.active{display:flex; animation:screenIn .35s ease;}
+
+  /* Splash */
+  #view-splash{align-items:center; justify-content:center; text-align:center;
+    background:linear-gradient(160deg,var(--yellow) 0%,#FFCE33 55%,var(--yellow) 100%);
+  }
+  #view-splash::after{content:''; position:absolute; right:-60px; top:-70px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.16);}
+  #view-splash::before{content:''; position:absolute; left:-50px; bottom:-70px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.13);}
+  .splash-logo{
+    width:104px; height:104px; border-radius:28px; background:rgba(255,255,255,.4); display:flex; align-items:center;
+    justify-content:center; margin-bottom:18px; position:relative; z-index:1;
+    animation:splashPop .7s cubic-bezier(.22,1.4,.36,1);
+  }
+  .splash-logo img{width:70%; height:70%; object-fit:contain; filter:drop-shadow(0 4px 8px rgba(0,0,0,.2));}
+  @keyframes splashPop{0%{transform:scale(.3) rotate(-12deg); opacity:0;} 60%{transform:scale(1.08) rotate(3deg); opacity:1;} 100%{transform:scale(1) rotate(0);}}
+  .splash-title{font-size:22px; font-weight:800; color:#1E1806; position:relative; z-index:1; animation:fadeInUp .5s .15s both;}
+  .splash-sub{font-size:12.5px; font-weight:700; color:#5A4E1F; margin-top:6px; position:relative; z-index:1; animation:fadeInUp .5s .28s both;}
+  @keyframes fadeInUp{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+  .splash-dots{display:flex; gap:6px; margin-top:30px; position:relative; z-index:1;}
+  .splash-dots span{width:7px; height:7px; border-radius:50%; background:#231C08; opacity:.35; animation:dotBounce 1s infinite;}
+  .splash-dots span:nth-child(2){animation-delay:.15s;}
+  .splash-dots span:nth-child(3){animation-delay:.3s;}
+  @keyframes dotBounce{0%,60%,100%{transform:translateY(0); opacity:.35;} 30%{transform:translateY(-6px); opacity:1;}}
+
+  /* Login / OTP shared */
+  .auth-top-ic{
+    width:56px; height:56px; border-radius:16px; background:var(--card-hi); display:flex; align-items:center;
+    justify-content:center; color:var(--yellow-deep); margin-bottom:20px; animation:fadeInUp .4s ease;
+  }
+  .auth-heading{font-size:21px; font-weight:800; letter-spacing:-.3px; animation:fadeInUp .4s .05s both;}
+  .auth-subtext{font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.5; animation:fadeInUp .4s .1s both;}
+  .auth-field-wrap{margin-top:28px; animation:fadeInUp .4s .15s both;}
+  .field-label{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-bottom:8px;}
+  .phone-field{
+    display:flex; align-items:center; gap:10px; background:var(--card); border:1.5px solid var(--line); border-radius:10px;
+    padding:13px 14px; transition:border-color .15s, box-shadow .15s;
+  }
+  .phone-field:focus-within{border-color:var(--yellow-deep); box-shadow:0 0 0 3px #FDC20222;}
+  .phone-cc{font-size:14px; font-weight:800; color:var(--ink); padding-right:10px; border-right:1.5px solid var(--line); flex-shrink:0;}
+  .phone-field input{border:none; outline:none; flex:1; font-size:14.5px; font-family:inherit; font-weight:700; color:var(--ink); background:transparent; letter-spacing:.4px;}
+  .auth-cta{
+    margin-top:24px; width:100%; padding:15px; border-radius:10px; border:none; background:var(--green);
+    color:#fff; font-weight:800; font-size:14.5px; cursor:pointer; box-shadow:0 8px 20px rgba(76,175,109,.32);
+    transition:transform .12s, opacity .2s; display:flex; align-items:center; justify-content:center; gap:8px;
+    animation:fadeInUp .4s .2s both;
+  }
+  .auth-cta:active{transform:scale(.97);}
+  .auth-cta:disabled{opacity:.55; pointer-events:none;}
+  .auth-foot{font-size:11px; color:var(--muted); text-align:center; margin-top:auto; padding-top:22px; line-height:1.6; animation:fadeInUp .4s .25s both;}
+  .auth-foot b{color:var(--green-dim); font-weight:700; cursor:pointer;}
+
+  .otp-field-row{display:flex; gap:7px; margin-top:10px; animation:fadeInUp .4s .15s both;}
+  .otp-field-row .otp-box{flex:1; width:auto; height:52px; font-size:18px; padding:0;}
+  .otp-hint{font-size:12px; color:var(--muted); margin-top:14px; display:flex; align-items:center; justify-content:space-between; animation:fadeInUp .4s .2s both;}
+  .resend-link{font-weight:800; color:var(--green-dim); cursor:pointer;}
+  .resend-link.disabled{color:var(--muted); pointer-events:none;}
+  .change-num-link{font-size:11.5px; font-weight:700; color:var(--yellow-deep); cursor:pointer; margin-top:16px; display:inline-flex; align-items:center; gap:5px; animation:fadeInUp .4s .3s both;}
+
+  .shake{animation:shakeX .4s;}
+  @keyframes shakeX{0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(7px);} 60%{transform:translateX(-5px);} 80%{transform:translateX(3px);}}
+
+  /* Verified check for OTP success */
+  .verify-check{
+    width:64px; height:64px; border-radius:50%; background:var(--green-light); display:flex; align-items:center;
+    justify-content:center; color:var(--green-dim); margin:0 auto 16px; animation:checkPop .5s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  /* App reveal */
+  #app{display:none;}
+  #app.reveal{display:flex; animation:appReveal .45s cubic-bezier(.22,.9,.3,1);}
+  @keyframes appReveal{from{opacity:0; transform:scale(.97);} to{opacity:1; transform:scale(1);}}
+
+  /* Notification list */
+  .notif-card{
+    display:flex; gap:12px; background:var(--card); border:1px solid var(--line); border-left:3px solid var(--yellow-deep);
+    border-radius:10px; padding:12px 14px; margin-bottom:10px; box-shadow:0 2px 10px rgba(43,36,16,.04);
+    animation:cardIn .3s ease both;
+  }
+  .notif-card.read{border-left-color:var(--line); opacity:.7;}
+  .notif-ic{width:34px; height:34px; border-radius:8px; background:var(--card-hi); color:var(--yellow-deep); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .notif-title{font-size:12.5px; font-weight:800;}
+  .notif-body{font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.4;}
+  .notif-time{font-size:10px; color:var(--muted); margin-top:6px; font-weight:600;}
+
+  /* Info-page building blocks (Vehicle / Bank / Docs / Support / Ratings) */
+  .info-card-row{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:10px; box-shadow:0 2px 10px rgba(43,36,16,.04); transition:transform .15s;}
+  .info-card-row:hover{transform:translateY(-2px);}
+  .info-ic-box{width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .info-card-title{font-size:13px; font-weight:800;}
+  .info-card-sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .verify-chip{margin-left:auto; font-size:9.5px; font-weight:800; text-transform:uppercase; padding:4px 9px; border-radius:20px; flex-shrink:0;}
+  .verify-chip.ok{background:var(--green-light); color:var(--green-dim);}
+  .verify-chip.pending{background:var(--card-hi); color:var(--yellow-deep);}
+
+  .doc-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .doc-tile{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center; transition:transform .15s;}
+  .doc-tile:hover{transform:translateY(-2px);}
+  .doc-tile .di{width:38px; height:38px; border-radius:10px; background:var(--card-hi); color:var(--yellow-deep); display:flex; align-items:center; justify-content:center; margin:0 auto 8px;}
+  .doc-tile .dn{font-size:12px; font-weight:800;}
+
+  .rating-bar-row{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:7px;}
+  .rating-bar-track{flex:1; height:7px; border-radius:6px; background:var(--card-hi); overflow:hidden;}
+  .rating-bar-fill{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--yellow),var(--yellow-deep)); width:0; transition:width 1s cubic-bezier(.22,.9,.3,1);}
+
+  .review-card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; animation:cardIn .3s ease both;}
+  .review-top{display:flex; align-items:center; gap:8px;}
+  .review-name{font-size:12.5px; font-weight:800; flex:1;}
+  .review-stars{display:flex; gap:1px; color:var(--yellow-deep);}
+  .review-text{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.45;}
+
+  .edit-fab{position:absolute; right:14px; bottom:14px; width:34px; height:34px; border-radius:50%; background:var(--yellow); border:none; display:flex; align-items:center; justify-content:center; color:#231C08; box-shadow:0 4px 10px rgba(232,164,0,.4); cursor:pointer;}
 </style>
 </head>
 <body>
+
+<!-- ================= AUTH FLOW ================= -->
+<div id="authOverlay">
+  <div class="auth-view active" id="view-splash">
+    <div class="splash-logo"><img src="logo.png" alt="Pakka Doodhwala"></div>
+    <div class="splash-title">Pakka Doodhwala</div>
+    <div class="splash-sub">Delivery Partner App</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="auth-view" id="view-login">
+    <div class="auth-top-ic">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+    </div>
+    <div class="auth-heading">Partner Login</div>
+    <div class="auth-subtext">Enter your registered mobile number to receive a one-time password.</div>
+    <div class="auth-field-wrap">
+      <div class="field-label">Mobile Number</div>
+      <div class="phone-field">
+        <span class="phone-cc">🇮🇳 +91</span>
+        <input type="tel" id="loginPhone" placeholder="98765 43210" maxlength="10" inputmode="numeric">
+      </div>
+    </div>
+    <button class="auth-cta" id="sendOtpBtn">
+      Send OTP
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div class="auth-foot">By continuing, you agree to Pakka Doodhwala's <b>Terms of Service</b> and <b>Privacy Policy</b>.</div>
+  </div>
+
+  <div class="auth-view" id="view-otp">
+    <div class="auth-top-ic" style="background:var(--green-light); color:var(--green-dim);">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="auth-heading">Verify OTP</div>
+    <div class="auth-subtext">Enter the 6-digit code sent to <b id="otpPhoneShown" style="color:var(--ink);">+91 98765 43210</b></div>
+    <div class="otp-field-row" id="loginOtpRow">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+      <input class="otp-box" maxlength="1" inputmode="numeric">
+    </div>
+    <div class="otp-hint" style="justify-content:center; gap:6px; margin-top:8px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>Demo mode — use OTP <b style="color:var(--ink);">123456</b></span>
+    </div>
+    <div class="otp-hint">
+      <span id="resendTimerText">Resend code in <b id="resendSecs">30</b>s</span>
+      <span class="resend-link disabled" id="resendLink">Resend OTP</span>
+    </div>
+    <button class="auth-cta" id="verifyOtpBtn">Verify &amp; Continue</button>
+    <div class="change-num-link" id="changeNumLink">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Change mobile number
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- ================= TOP BAR ================= -->
@@ -474,7 +656,7 @@
           <span class="go-label" id="goLabel">Online</span>
           <div class="go-track"></div>
         </div>
-        <button class="icon-btn" id="notifBtn" aria-label="Notifications">
+        <button class="icon-btn" id="notifBtn" aria-label="Notifications" onclick="openNotifications()">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="badge" id="notifBadge">2</span>
         </button>
@@ -548,11 +730,11 @@
   <!-- ================= ACCOUNT SCREEN ================= -->
   <div class="screen" id="screen-account">
     <div class="section-title" style="margin-bottom:14px;">Account</div>
-    <div class="account-header">
+    <div class="account-header" style="position:relative;">
       <div class="account-avatar">RK</div>
       <div>
-        <div class="account-name">Ravi Kumar</div>
-        <div class="account-sub">Bike &middot; TS 09 EQ 4471</div>
+        <div class="account-name" id="acctName">Ravi Kumar</div>
+        <div class="account-sub" id="acctPhoneSub">+91 98765 43210 &middot; TS 09 EQ 4471</div>
         <div class="stars">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -562,17 +744,20 @@
           <span style="font-size:11px; color:var(--muted); font-weight:700; margin-left:4px;">4.8</span>
         </div>
       </div>
+      <button class="edit-fab" onclick="showToast('Edit profile coming soon')" aria-label="Edit profile">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
     </div>
 
     <div class="settings-group">
-      <div class="settings-row"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h1l2-5h12l2 5h1v5h-3M6 18H3v-5"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>Vehicle Details<span class="arrow">›</span></div>
-      <div class="settings-row"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>Bank &amp; UPI<span class="arrow">›</span></div>
-      <div class="settings-row"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Documents<span class="arrow">›</span></div>
-      <div class="settings-row"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>Help &amp; Support<span class="arrow">›</span></div>
-      <div class="settings-row"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l.77.78L12 20.66l7.65-7.65.77-.78a5.4 5.4 0 0 0 0-7.65z"/></svg></div>Ratings &amp; Reviews<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="openVehicleInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h1l2-5h12l2 5h1v5h-3M6 18H3v-5"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>Vehicle Details<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="openBankInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>Bank &amp; UPI<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="openDocsInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Documents<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="openSupportInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>Help &amp; Support<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="openRatingsInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l.77.78L12 20.66l7.65-7.65.77-.78a5.4 5.4 0 0 0 0-7.65z"/></svg></div>Ratings &amp; Reviews<span class="arrow">›</span></div>
     </div>
     <div class="settings-group">
-      <div class="settings-row danger"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>Log Out</div>
+      <div class="settings-row danger" onclick="logoutUser()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>Log Out</div>
     </div>
   </div>
 
@@ -1049,7 +1234,7 @@ function callCustomer(phone){
   showToast('Calling ' + phone + '…');
 }
 function navigateTo(name){
-  showToast('Opening navigation to ' + name.split(' ')[0] + '\\'s location…');
+  showToast('Opening navigation to ' + name.split(' ')[0] + "'s location…");
 }
 
 /* OTP auto-advance */
@@ -1198,8 +1383,322 @@ function renderAll(){
   refreshTopStats();
   renderEarnings();
 }
-renderAll();
-scheduleIncomingOrder();
+
+/* =========================================================
+   GENERIC INFO SHEET (reuses the order-detail sheet shell)
+========================================================= */
+function openInfoSheet(title, bodyHtml){
+  const sheet = document.getElementById('detailSheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="detail-head">
+      <div class="detail-title">${title}</div>
+      <div class="close-btn" onclick="closeDetail()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    ${bodyHtml}
+  `;
+  document.getElementById('detailBackdrop').classList.add('show');
+  const fills = sheet.querySelectorAll('.rating-bar-fill');
+  if(fills.length){
+    requestAnimationFrame(()=> setTimeout(()=> fills.forEach(f=> f.style.width = f.dataset.w + '%'), 60));
+  }
+}
+
+/* ---- Notifications ---- */
+const NOTIFS = [
+  { ic:'bell', title:'New delivery request', body:'You have a new delivery request from Vikram Sharma, HITEC City.', time:'Just now', read:false },
+  { ic:'wallet', title:'Payout processed', body:'₹8,640 has been credited to your bank account for last week.', time:'2 hours ago', read:false },
+  { ic:'shield', title:'Document expiring soon', body:'Your vehicle insurance expires in 12 days. Please renew to keep delivering.', time:'Yesterday', read:true },
+  { ic:'star', title:'New 5★ rating', body:'Sneha Rao rated your last delivery 5 stars — keep it up!', time:'2 days ago', read:true },
+];
+const NOTIF_ICONS = {
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  wallet:'<path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1"/><path d="M18 12a2 2 0 1 0 0 4h4v-4Z"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
+  star:'<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
+};
+function openNotifications(){
+  const body = `
+    <div style="margin-top:2px;">
+      ${NOTIFS.map((n,i)=>`
+        <div class="notif-card ${n.read?'read':''}" style="animation-delay:${i*60}ms;">
+          <div class="notif-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${NOTIF_ICONS[n.ic]}</svg></div>
+          <div style="flex:1; min-width:0;">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-body">${n.body}</div>
+            <div class="notif-time">${n.time}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  openInfoSheet('Notifications', body);
+  document.getElementById('notifBadge').style.display = 'none';
+}
+
+/* ---- Vehicle details ---- */
+function openVehicleInfo(){
+  const body = `
+    <div class="detail-block" style="text-align:center; padding:22px 14px;">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="var(--yellow-deep)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;"><path d="M3 13h1l2-5h12l2 5h1v5h-3M6 18H3v-5"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+      <div style="font-size:16px; font-weight:800;">TS 09 EQ 4471</div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Bajaj Pulsar 150 &middot; 2021 model</div>
+    </div>
+    <div class="info-card-row"><div class="info-ic-box" style="background:var(--card-hi); color:var(--yellow-deep);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg></div><div><div class="info-card-title">Registration (RC)</div><div class="info-card-sub">Valid till Mar 2031</div></div><span class="verify-chip ok">Verified</span></div>
+    <div class="info-card-row"><div class="info-ic-box" style="background:var(--card-hi); color:var(--yellow-deep);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div><div><div class="info-card-title">Insurance</div><div class="info-card-sub">Expires in 12 days</div></div><span class="verify-chip pending">Renew soon</span></div>
+    <div class="info-card-row"><div class="info-ic-box" style="background:var(--card-hi); color:var(--yellow-deep);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="info-card-title">Pollution Certificate</div><div class="info-card-sub">Valid till Nov 2026</div></div><span class="verify-chip ok">Verified</span></div>
+    <div class="detail-cta-row"><button class="cta-outline" style="flex:1;" onclick="showToast('Opening vehicle update form…')">Update Vehicle Info</button></div>
+  `;
+  openInfoSheet('Vehicle Details', body);
+}
+
+/* ---- Bank & UPI ---- */
+function openBankInfo(){
+  const body = `
+    <div class="detail-block" style="background:linear-gradient(135deg,var(--green),var(--green-dim)); color:#fff; border:none;">
+      <div style="font-size:11px; font-weight:700; opacity:.85;">PRIMARY BANK ACCOUNT</div>
+      <div style="font-size:16px; font-weight:800; margin-top:6px; letter-spacing:1px;">HDFC Bank •••• 4821</div>
+      <div style="font-size:11.5px; opacity:.85; margin-top:4px;">Ravi Kumar &middot; Savings Account</div>
+    </div>
+    <div class="info-card-row"><div class="info-ic-box" style="background:var(--blue-light); color:var(--blue);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div><div class="info-card-title">UPI ID</div><div class="info-card-sub">ravikumar@okhdfcbank</div></div><span class="verify-chip ok">Active</span></div>
+    <div class="info-card-row"><div class="info-ic-box" style="background:var(--green-light); color:var(--green-dim);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="info-card-title">Payout Schedule</div><div class="info-card-sub">Weekly, every Monday 6 PM</div></div></div>
+    <div class="detail-cta-row"><button class="cta-outline" style="flex:1;" onclick="showToast('Opening bank details form…')">Change Bank Account</button></div>
+  `;
+  openInfoSheet('Bank & UPI', body);
+}
+
+/* ---- Documents ---- */
+function openDocsInfo(){
+  const docs = [
+    { name:'Driving Licence', ok:true },
+    { name:'RC Book', ok:true },
+    { name:'Aadhar Card', ok:true },
+    { name:'Insurance', ok:false },
+  ];
+  const body = `
+    <div class="doc-grid">
+      ${docs.map(d=>`
+        <div class="doc-tile">
+          <div class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="dn">${d.name}</div>
+          <span class="verify-chip ${d.ok?'ok':'pending'}" style="margin-top:8px; display:inline-block;">${d.ok?'Verified':'Pending'}</span>
+        </div>`).join('')}
+    </div>
+    <div class="detail-cta-row" style="margin-top:14px;"><button class="cta-solid" style="flex:1;" onclick="showToast('Opening document upload…')">Upload New Document</button></div>
+  `;
+  openInfoSheet('Documents', body);
+}
+
+/* ---- Help & Support ---- */
+function openSupportInfo(){
+  const items = [
+    { ic:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.34 1.79.65 2.65a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.43-1.27a2 2 0 0 1 2.11-.45c.86.31 1.75.53 2.65.65A2 2 0 0 1 22 16.92z"/>', title:'Call Support', sub:'Available 24×7', action:"showToast('Calling support…')" },
+    { ic:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', title:'Chat with us', sub:'Avg. reply time 2 min', action:"showToast('Opening support chat…')" },
+    { ic:'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>', title:'FAQs', sub:'Common partner questions', action:"showToast('Opening FAQs…')" },
+    { ic:'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>', title:'Raise a Ticket', sub:'Report a delivery issue', action:"showToast('Opening ticket form…')" },
+  ];
+  const body = `
+    ${items.map(it=>`
+      <div class="info-card-row" style="cursor:pointer;" onclick="${it.action}">
+        <div class="info-ic-box" style="background:var(--card-hi); color:var(--yellow-deep);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></div>
+        <div><div class="info-card-title">${it.title}</div><div class="info-card-sub">${it.sub}</div></div>
+        <span class="arrow" style="margin-left:auto; color:var(--muted);">›</span>
+      </div>`).join('')}
+  `;
+  openInfoSheet('Help & Support', body);
+}
+
+/* ---- Ratings & Reviews ---- */
+function openRatingsInfo(){
+  const bars = [ {s:5,p:78},{s:4,p:15},{s:3,p:5},{s:2,p:1},{s:1,p:1} ];
+  const reviews = [
+    { name:'Sneha Rao', stars:5, text:'Delivered right on time and very polite. Great service!' },
+    { name:'Karthik Iyer', stars:5, text:'Handled the packet carefully, no leakage at all.' },
+    { name:'Fatima Sheikh', stars:4, text:'Good, but arrived a little later than the ETA shown.' },
+  ];
+  const body = `
+    <div class="detail-block" style="text-align:center;">
+      <div style="font-size:34px; font-weight:800;">4.8</div>
+      <div class="stars" style="justify-content:center; margin-top:4px;">
+        ${'★★★★★'.split('').map(()=>`<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--yellow-deep)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`).join('')}
+      </div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:4px;">Based on 612 deliveries</div>
+    </div>
+    <div class="detail-block">
+      ${bars.map(b=>`
+        <div class="rating-bar-row">
+          <span style="width:14px;">${b.s}★</span>
+          <div class="rating-bar-track"><div class="rating-bar-fill" data-w="${b.p}"></div></div>
+          <span style="width:26px; text-align:right;">${b.p}%</span>
+        </div>`).join('')}
+    </div>
+    <div class="db-title" style="margin:4px 2px 8px;">Recent Reviews</div>
+    ${reviews.map(r=>`
+      <div class="review-card">
+        <div class="review-top">
+          <span class="review-name">${r.name}</span>
+          <span class="review-stars">${Array.from({length:5}).map((_,i)=>`<svg width="11" height="11" viewBox="0 0 24 24" fill="${i<r.stars?'var(--yellow-deep)':'var(--line)'}"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`).join('')}</span>
+        </div>
+        <div class="review-text">${r.text}</div>
+      </div>`).join('')}
+  `;
+  openInfoSheet('Ratings & Reviews', body);
+}
+
+/* =========================================================
+   AUTH FLOW — splash → login → otp → app
+========================================================= */
+const DEMO_OTP = '123456';
+function showAuthView(id){
+  document.querySelectorAll('.auth-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let resendTimer, resendSecs = 30;
+function startResendTimer(){
+  clearInterval(resendTimer);
+  resendSecs = 30;
+  const secsEl = document.getElementById('resendSecs');
+  const textEl = document.getElementById('resendTimerText');
+  const linkEl = document.getElementById('resendLink');
+  textEl.style.display = 'inline';
+  linkEl.classList.add('disabled');
+  secsEl.textContent = resendSecs;
+  resendTimer = setInterval(()=>{
+    resendSecs -= 1;
+    secsEl.textContent = resendSecs;
+    if(resendSecs <= 0){
+      clearInterval(resendTimer);
+      textEl.style.display = 'none';
+      linkEl.classList.remove('disabled');
+    }
+  }, 1000);
+}
+
+function focusFirstOtp(){
+  const first = document.querySelector('#loginOtpRow .otp-box');
+  if(first) setTimeout(()=> first.focus(), 350);
+}
+
+document.getElementById('sendOtpBtn').addEventListener('click', ()=>{
+  const phoneInput = document.getElementById('loginPhone');
+  const digits = phoneInput.value.replace(/\D/g,'');
+  if(digits.length !== 10){
+    phoneInput.parentElement.classList.add('shake');
+    setTimeout(()=> phoneInput.parentElement.classList.remove('shake'), 400);
+    showToast('Enter a valid 10-digit mobile number');
+    return;
+  }
+  document.getElementById('otpPhoneShown').textContent = '+91 ' + digits.slice(0,5) + ' ' + digits.slice(5);
+  showAuthView('view-otp');
+  startResendTimer();
+  focusFirstOtp();
+  showToast('OTP sent via SMS');
+});
+
+document.getElementById('resendLink').addEventListener('click', function(){
+  if(this.classList.contains('disabled')) return;
+  startResendTimer();
+  showToast('OTP resent');
+});
+
+document.getElementById('changeNumLink').addEventListener('click', ()=>{
+  clearInterval(resendTimer);
+  showAuthView('view-login');
+});
+
+document.getElementById('verifyOtpBtn').addEventListener('click', ()=> attemptVerifyOtp());
+
+/* OTP auto-advance for the LOGIN otp row specifically (separate from delivery OTP) */
+document.getElementById('loginOtpRow').addEventListener('input', (e)=>{
+  if(!e.target.classList.contains('otp-box')) return;
+  e.target.value = e.target.value.replace(/\D/g,'');
+  if(e.target.value.length===1){
+    const next = e.target.nextElementSibling;
+    if(next && next.classList.contains('otp-box')) next.focus();
+    const boxes = document.querySelectorAll('#loginOtpRow .otp-box');
+    if([...boxes].length===6 && [...boxes].every(b=>b.value.length===1)) attemptVerifyOtp();
+  }
+});
+document.getElementById('loginOtpRow').addEventListener('keydown', (e)=>{
+  if(e.key === 'Backspace' && e.target.value === ''){
+    const prev = e.target.previousElementSibling;
+    if(prev && prev.classList.contains('otp-box')) prev.focus();
+  }
+});
+
+function attemptVerifyOtp(){
+  const boxes = [...document.querySelectorAll('#loginOtpRow .otp-box')];
+  const code = boxes.map(b=>b.value).join('');
+  if(code.length !== 6){
+    showToast('Enter the 6-digit OTP');
+    return;
+  }
+  const btn = document.getElementById('verifyOtpBtn');
+  btn.textContent = 'Verifying…';
+  btn.disabled = true;
+  setTimeout(()=>{
+    btn.textContent = 'Verify & Continue';
+    btn.disabled = false;
+    if(code !== DEMO_OTP){
+      const row = document.getElementById('loginOtpRow');
+      row.classList.add('shake');
+      setTimeout(()=> row.classList.remove('shake'), 400);
+      boxes.forEach(b=> b.value = '');
+      boxes[0].focus();
+      showToast('Incorrect OTP — try 123456');
+      return;
+    }
+    completeLogin();
+  }, 700);
+}
+
+function completeLogin(){
+  try{ localStorage.setItem('pd_partner_logged_in', '1'); }catch(e){}
+  clearInterval(resendTimer);
+  document.getElementById('authOverlay').style.transition = 'opacity .35s ease';
+  document.getElementById('authOverlay').style.opacity = '0';
+  setTimeout(()=>{
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('app').classList.add('reveal');
+    bootApp();
+    showToast('Welcome back, Ravi! 👋');
+  }, 350);
+}
+
+function logoutUser(){
+  try{ localStorage.removeItem('pd_partner_logged_in'); }catch(e){}
+  closeDetail();
+  clearTimeout(incomingTimer);
+  hideIncomingOrder();
+  document.getElementById('app').classList.remove('reveal');
+  const overlay = document.getElementById('authOverlay');
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '1';
+  document.getElementById('loginPhone').value = '';
+  document.querySelectorAll('#loginOtpRow .otp-box').forEach(b=> b.value = '');
+  showAuthView('view-login');
+  showToast('Logged out');
+}
+
+let appBooted = false;
+function bootApp(){
+  if(appBooted) return;
+  appBooted = true;
+  renderAll();
+  scheduleIncomingOrder();
+}
+
+/* Boot sequence: splash → (skip login if remembered) → login */
+setTimeout(()=>{
+  let remembered = false;
+  try{ remembered = localStorage.getItem('pd_partner_logged_in') === '1'; }catch(e){}
+  if(remembered){
+    completeLogin();
+  } else {
+    showAuthView('view-login');
+  }
+}, 1600);
 </script>
 </body>
 </html>
