@@ -1,3 +1,0 @@
-#refresh-btn svg{transition:transform .4s ease;}
-#refresh-btn.spinning svg{animation:spinRefresh .6s linear;}
-@keyframes spinRefresh{to{transform:rotate(360deg);}}
