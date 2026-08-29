@@ -25,7 +25,12 @@
     --radius-sm:5px;
     --nav-h:76px;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  *{
+    box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+    -webkit-touch-callout:none; /* kills iOS long-press "copy/save" menu */
+  }
+  input, textarea{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
   html,body{height:100%;}
   html{ overscroll-behavior-y:none; }
   body{
@@ -1076,7 +1081,11 @@ async function getRoadRoute(fromLat, fromLng, toLat, toLng){
   return r;
 }
 
-/* Recompute every order's live distance/ETA from the rider's real GPS fix */
+/* Recompute every order's live distance/ETA from the rider's real GPS fix.
+   IMPORTANT: this runs on every GPS tick (every couple seconds while
+   moving), so it must NEVER call renderAll()/innerHTML — that would
+   rebuild every card and look like a page reload. It only patches the
+   specific distance/ETA text nodes in place via patchLiveNumbers(). */
 let recalcInFlight = false;
 async function recalcLiveDistances(){
   if(!riderLoc || recalcInFlight) return;
@@ -1089,7 +1098,45 @@ async function recalcLiveDistances(){
     o._route = r.geometry;
   }));
   recalcInFlight = false;
-  renderAll();
+  patchLiveNumbers();
+}
+
+/* =========================================================
+   LIVE IN-PLACE CARD PATCHING (no re-render, no flicker)
+   Updates only the text of elements tagged data-live="dist"/"eta"
+   for the matching order id — the surrounding card DOM, its
+   animations, scroll position, and any open state are untouched.
+   A full renderAll() (rebuild) only ever happens on real structural
+   changes: accept/complete/status change, filter switch, screen nav.
+========================================================= */
+function patchText(el, text){
+  if(el && el.textContent !== text) el.textContent = text;
+}
+function patchLiveNumbers(){
+  orders.forEach(o=>{
+    if(o.status==='delivered') return;
+    document.querySelectorAll(`[data-live="dist"][data-order-id="${o.id}"]`).forEach(el=>{
+      patchText(el, distanceLabel(o.distanceKm));
+    });
+    document.querySelectorAll(`[data-live="eta"][data-order-id="${o.id}"]`).forEach(el=>{
+      patchText(el, el.classList.contains('hero-eta') ? 'ETA ' + o.eta : o.eta);
+    });
+  });
+  // Route banner "sorted nearest first" sub-line
+  const banner = document.getElementById('routeBanner');
+  if(banner && banner.style.display !== 'none'){
+    const queue = sortedPendingQueue();
+    if(queue.length){
+      const sub = banner.querySelector('.rsub');
+      patchText(sub, `Sorted nearest first — starting with ${queue[0].name} (${distanceLabel(queue[0].distanceKm)})`);
+    }
+  }
+  // Open detail sheet map badge, if that order is currently shown
+  const badge = document.getElementById('detailMapBadge');
+  if(badge && detailMapInstance && detailMapInstance._orderRef){
+    const o = detailMapInstance._orderRef;
+    patchText(badge, distanceLabel(o.distanceKm) + ' · ' + o.eta);
+  }
 }
 
 /* =========================================================
@@ -1216,7 +1263,7 @@ function renderHero(){
       <div class="hero-inner">
         <div class="hero-top">
           <div class="hero-badge"><span class="liveDot"></span>ACTIVE DELIVERY &middot; ${active.id}</div>
-          <div class="hero-eta">ETA ${active.eta}</div>
+          <div class="hero-eta" data-live="eta" data-order-id="${active.id}">ETA ${active.eta}</div>
         </div>
         <div class="cust-row">
           <div class="avatar" style="background:${colorFor(idx)}22; color:${colorFor(idx)};">${initials(active.name)}</div>
@@ -1224,7 +1271,7 @@ function renderHero(){
             <div class="cust-name">${active.name}</div>
             <div class="cust-addr">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span>${active.area} &middot; ${distanceLabel(active.distanceKm)}</span>
+              <span>${active.area} &middot; <span data-live="dist" data-order-id="${active.id}">${distanceLabel(active.distanceKm)}</span></span>
             </div>
           </div>
           <div class="cust-actions">
@@ -1434,8 +1481,8 @@ function customerCardHTML(o, idx, queuePos){
           <div class="cc-sub">${o.id} &middot; ${o.items.length} item${o.items.length>1?'s':''} &middot; ${o.zone||''}</div>
         </div>
         <div class="cc-dist">
-          <div class="d">${distanceLabel(o.distanceKm)}</div>
-          <div class="t">${o.eta}</div>
+          <div class="d" data-live="dist" data-order-id="${o.id}">${distanceLabel(o.distanceKm)}</div>
+          <div class="t" data-live="eta" data-order-id="${o.id}">${o.eta}</div>
         </div>
       </div>
       <div class="cc-addr">
@@ -1876,6 +1923,24 @@ if(refreshBtnEl){
     setTimeout(()=>{ icon.style.transition='none'; icon.style.transform='rotate(0deg)'; }, 620);
   });
 }
+
+/* =========================================================
+   DISABLE "HOLD & COPY" / LONG-PRESS SELECTION APP-WIDE
+   (CSS user-select handles most of it; this is the JS-level
+   backstop some Android/Chrome versions need). Inputs and
+   textareas are explicitly excluded so typing still works.
+========================================================= */
+(function disableHoldToCopy(){
+  function isEditable(el){
+    return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  }
+  document.addEventListener('contextmenu', (e)=>{
+    if(!isEditable(e.target)) e.preventDefault();
+  });
+  document.addEventListener('selectstart', (e)=>{
+    if(!isEditable(e.target)) e.preventDefault();
+  });
+})();
 
 /* =========================================================
    BLOCK BROWSER PULL-TO-REFRESH (no accidental page reloads)
