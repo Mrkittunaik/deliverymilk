@@ -70,8 +70,15 @@
   .brand-icon img{width:78%; height:78%; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));}
   .brand-text{display:flex; flex-direction:column; line-height:1.15; min-width:0;}
   .brand-title{font-size:16px; font-weight:800; letter-spacing:-.2px; color:#1E1806; white-space:nowrap;}
-  .brand-sub{font-size:10.5px; color:#5A4E1F; font-weight:700; display:flex; align-items:center; gap:5px; margin-top:2px;}
-  .brand-sub .dot{width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 6px #4caf6d88;}
+  .gps-pill{
+    font-size:10px; font-weight:700; color:#5A4E1F; display:flex; align-items:center; gap:5px;
+    margin-top:3px; cursor:pointer; width:max-content; max-width:100%;
+  }
+  .gps-pill span:last-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gps-dot{width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .gps-dot.ok{background:var(--green); box-shadow:0 0 6px #4caf6d88; animation:gpsPulse 1.6s infinite;}
+  .gps-dot.busy{background:var(--yellow-deep); box-shadow:0 0 6px #e8a40088; animation:gpsPulse 1s infinite;}
+  .gps-dot.off{background:var(--danger); box-shadow:0 0 6px #e0503c88;}
 
   .topbar-icons{display:flex; align-items:center; gap:10px; flex-shrink:0;}
   .icon-btn{
@@ -113,16 +120,6 @@
   }
   .stat-pill .v{font-size:14.5px; font-weight:800; color:#1E1806;}
   .stat-pill .l{font-size:9px; font-weight:700; color:#5A4E1F; margin-top:1px;}
-
-  .gps-strip{
-    margin-top:9px; display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.55);
-    border-radius:20px; padding:6px 12px; font-size:10.5px; font-weight:800; color:#3A3110;
-    cursor:pointer; position:relative; z-index:1; width:max-content;
-  }
-  .gps-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
-  .gps-dot.ok{background:var(--green); box-shadow:0 0 0 3px #4caf6d33; animation:gpsPulse 1.6s infinite;}
-  .gps-dot.busy{background:var(--yellow-deep); animation:gpsPulse 1s infinite;}
-  .gps-dot.off{background:var(--danger);}
   @keyframes gpsPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,109,.4);} 50%{box-shadow:0 0 0 5px rgba(76,175,109,0);}}
 
   /* ---------- SCREEN TRANSITIONS ---------- */
@@ -703,7 +700,10 @@
         <div class="brand-icon"><img src="logo.png" alt="Pakka Doodhwala"></div>
         <div class="brand-text">
           <div class="brand-title">Pakka Doodhwala</div>
-          <div class="brand-sub"><span class="dot"></span>Delivery Partner</div>
+          <div class="gps-pill" id="gpsStrip" onclick="requestLiveTracking()">
+            <span class="gps-dot off" id="gpsDot"></span>
+            <span id="gpsStatusLabel">Location off — tap to enable</span>
+          </div>
         </div>
       </div>
       <div class="topbar-icons">
@@ -722,11 +722,6 @@
       <div class="stat-pill"><div class="v" id="statCount">0</div><div class="l">Total Orders</div></div>
       <div class="stat-pill"><div class="v" id="statDeliveries">0</div><div class="l">Deliveries</div></div>
       <div class="stat-pill"><div class="v" id="statDist">0 km</div><div class="l">Distance</div></div>
-    </div>
-
-    <div class="gps-strip" id="gpsStrip" onclick="requestLiveTracking()">
-      <span class="gps-dot off" id="gpsDot"></span>
-      <span id="gpsStatusLabel">Tap to start live tracking</span>
     </div>
   </div>
 
@@ -1005,6 +1000,15 @@ function stopLiveTracking(){
 }
 
 function requestLiveTracking(){
+  let state = null;
+  try{ state = localStorage.getItem(GEO_STATE_KEY); }catch(e){}
+  if(state === 'denied'){
+    // Browsers won't re-show the permission prompt once denied — the
+    // person has to flip it back on themselves in site settings.
+    showToast('Location is off for this app — turn it on in your browser\'s site settings to enable live tracking');
+    setGpsStatusUI('denied');
+    return;
+  }
   // Triggers the native one-time browser permission prompt.
   // Once granted, the browser remembers it — future app opens
   // auto-resume tracking without asking again.
@@ -1035,10 +1039,10 @@ function setGpsStatusUI(state){
   const label = document.getElementById('gpsStatusLabel');
   if(!dot || !label) return;
   const map = {
-    live:      { cls:'ok',   text:'Live GPS active' },
-    locating:  { cls:'busy', text:'Getting your location…' },
+    live:      { cls:'ok',   text:'Live location on' },
+    locating:  { cls:'busy', text:'Locating…' },
     denied:    { cls:'off',  text:'Location off — tap to enable' },
-    prompt:    { cls:'off',  text:'Tap to start live tracking' },
+    prompt:    { cls:'off',  text:'Location off — tap to enable' },
     error:     { cls:'off',  text:'GPS error — tap to retry' }
   };
   const s = map[state] || map.prompt;
