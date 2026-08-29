@@ -1,4 +1,0 @@
-# Cloudflare Pages redirects file
-# Root already serves index.html by default; this just keeps trailing-slash
-# access to /pages working without a 404 if someone hits /pages directly.
-/pages   /pages/login.html   302
