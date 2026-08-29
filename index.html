@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Pakka Doodhwala — Delivery Partner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
   :root{
     --bg:#FFFDF6;
@@ -26,11 +27,14 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
+  html{ overscroll-behavior-y:none; }
   body{
     margin:0; background:var(--bg); color:var(--ink);
     font-family:'Poppins','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     overscroll-behavior:none;
+    overscroll-behavior-y:none;
     -webkit-font-smoothing:antialiased;
+    position:fixed; inset:0; width:100%;
   }
   #app{
     display:flex; flex-direction:column; height:100vh; height:100dvh;
@@ -105,10 +109,21 @@
   .stat-pill .v{font-size:14.5px; font-weight:800; color:#1E1806;}
   .stat-pill .l{font-size:9px; font-weight:700; color:#5A4E1F; margin-top:1px;}
 
+  .gps-strip{
+    margin-top:9px; display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.55);
+    border-radius:20px; padding:6px 12px; font-size:10.5px; font-weight:800; color:#3A3110;
+    cursor:pointer; position:relative; z-index:1; width:max-content;
+  }
+  .gps-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .gps-dot.ok{background:var(--green); box-shadow:0 0 0 3px #4caf6d33; animation:gpsPulse 1.6s infinite;}
+  .gps-dot.busy{background:var(--yellow-deep); animation:gpsPulse 1s infinite;}
+  .gps-dot.off{background:var(--danger);}
+  @keyframes gpsPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,109,.4);} 50%{box-shadow:0 0 0 5px rgba(76,175,109,0);}}
+
   /* ---------- SCREEN TRANSITIONS ---------- */
   .screen{
     flex:1; overflow-y:auto; padding:18px 18px calc(var(--nav-h) + 20px); -webkit-overflow-scrolling:touch;
-    display:none;
+    display:none; overscroll-behavior-y:contain;
   }
   .screen.active{display:block; animation:screenIn .28s ease;}
 
@@ -388,19 +403,21 @@
   .close-btn{width:32px; height:32px; border-radius:50%; background:var(--card-hi); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink);}
 
   .map-preview{
-    height:130px; border-radius:10px; margin-bottom:14px; position:relative; overflow:hidden;
-    background:
-      repeating-linear-gradient(0deg, #E9F2E6 0 1px, transparent 1px 26px),
-      repeating-linear-gradient(90deg, #E9F2E6 0 1px, transparent 1px 26px),
-      var(--green-light);
+    height:190px; border-radius:10px; margin-bottom:14px; position:relative; overflow:hidden;
+    background:var(--green-light);
     border:1px solid var(--line);
   }
-  .map-route{position:absolute; left:14%; top:70%; width:60%; height:2px; background:repeating-linear-gradient(90deg,var(--blue) 0 6px,transparent 6px 11px); transform:rotate(-18deg); transform-origin:left center;}
-  .map-pin{position:absolute; width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;}
-  .map-pin.me{left:12%; top:62%; background:var(--blue); box-shadow:0 3px 8px rgba(47,127,224,.4);}
-  .map-pin.dest{left:66%; top:22%; background:var(--danger); box-shadow:0 3px 8px rgba(224,80,60,.4);}
-  .map-pin svg{transform:rotate(45deg); color:#fff;}
-  .map-badge{position:absolute; left:10px; bottom:10px; background:#fff; font-size:10.5px; font-weight:800; padding:5px 9px; border-radius:20px; box-shadow:0 3px 8px rgba(0,0,0,.1); color:var(--ink);}
+  .map-preview .leaflet-container{ height:100%; width:100%; background:var(--green-light); font-family:inherit; }
+  .map-badge{position:absolute; left:10px; bottom:10px; z-index:500; background:#fff; font-size:10.5px; font-weight:800; padding:5px 9px; border-radius:20px; box-shadow:0 3px 8px rgba(0,0,0,.1); color:var(--ink);}
+  .live-me-pin{
+    width:16px; height:16px; border-radius:50%; background:var(--blue); border:3px solid #fff;
+    box-shadow:0 0 0 4px rgba(47,127,224,.35), 0 2px 6px rgba(0,0,0,.25); animation:gpsPulse 1.6s infinite;
+  }
+  .live-dest-pin{
+    width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    background:var(--danger); box-shadow:0 3px 8px rgba(224,80,60,.4);
+  }
+
 
   .detail-block{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px;}
   .detail-block .db-title{font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin-bottom:8px;}
@@ -697,14 +714,27 @@
     </div>
 
     <div class="stat-strip">
-      <div class="stat-pill"><div class="v" id="statEarnings">₹0</div><div class="l">Today</div></div>
-      <div class="stat-pill"><div class="v" id="statCount">0</div><div class="l">Deliveries</div></div>
+      <div class="stat-pill"><div class="v" id="statCount">0</div><div class="l">Total Orders</div></div>
+      <div class="stat-pill"><div class="v" id="statDeliveries">0</div><div class="l">Deliveries</div></div>
       <div class="stat-pill"><div class="v" id="statDist">0 km</div><div class="l">Distance</div></div>
+    </div>
+
+    <div class="gps-strip" id="gpsStrip" onclick="requestLiveTracking()">
+      <span class="gps-dot off" id="gpsDot"></span>
+      <span id="gpsStatusLabel">Tap to start live tracking</span>
     </div>
   </div>
 
   <!-- ================= HOME SCREEN ================= -->
   <div class="screen active" id="screen-home">
+
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">Live <span>Status</span></div>
+      <div class="section-link" id="refreshBtn" aria-label="Refresh">
+        <svg id="refreshIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </div>
+    </div>
 
     <div id="heroWrap"></div>
 
@@ -887,7 +917,10 @@
   <div class="toast" id="toast"></div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
+/* Fix Leaflet's default marker image paths (not used since we use divIcons, but harmless safeguard) */
+if(typeof L !== 'undefined'){ delete L.Icon.Default.prototype._getIconUrl; }
 /* =========================================================
    MOCK DATA — customer / delivery details
 ========================================================= */
@@ -896,14 +929,168 @@ function colorFor(i){ return AVATAR_COLORS[i % AVATAR_COLORS.length]; }
 function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
 
 let orders = [
-  { id:'PD-2291', name:'Anjali Reddy', phone:'+91 98765 43210', area:'Kittu Nagar, Kondapur', addr:'Flat 402, Sri Sai Residency, Kittu Nagar Main Rd, Kondapur, Hyderabad – 500084', instr:'Leave with the security guard if gate is locked.', items:['Full Cream Milk x2','Curd 500g x1'], amount:210, payment:'COD', distanceKm:0.9, eta:'6 min', status:'ongoing', step:2, zone:'Kondapur Zone', proof:null },
-  { id:'PD-2295', name:'Sneha Rao', phone:'+91 98123 45566', area:'Kondapur', addr:'Flat 12B, Manjeera Trinity, Kondapur, Hyderabad – 500084', instr:'Behind the temple, blue gate.', items:['Toned Milk x2','Curd 500g x2'], amount:240, payment:'COD', distanceKm:0.6, eta:'4 min', status:'pending', step:0, zone:'Kondapur Zone', proof:null },
-  { id:'PD-2292', name:'Vikram Sharma', phone:'+91 91234 56780', area:'HITEC City', addr:'H.No 8-3-1122, Green Meadows Apartments, HITEC City, Hyderabad – 500081', instr:'Ring the bell twice, dog in the house.', items:['Toned Milk x1','Paneer 200g x1','Ghee 500ml x1'], amount:485, payment:'Prepaid', distanceKm:1.6, eta:'11 min', status:'pending', step:0, zone:'HITEC City Zone', proof:null },
-  { id:'PD-2293', name:'Fatima Sheikh', phone:'+91 90000 11223', area:'Gachibowli', addr:'Plot 44, Nest Enclave, Gachibowli, Hyderabad – 500032', instr:'Call before arriving, no bell.', items:['Buffalo Milk x1'], amount:70, payment:'COD', distanceKm:2.3, eta:'15 min', status:'pending', step:0, zone:'Gachibowli Zone', proof:null },
-  { id:'PD-2294', name:'Karthik Iyer', phone:'+91 99887 76655', area:'Madhapur', addr:'3-6-77, Ayyappa Society, Madhapur, Hyderabad – 500081', instr:'', items:['Full Cream Milk x1','Butter 100g x1'], amount:165, payment:'Prepaid', distanceKm:3.1, eta:'18 min', status:'delivered', step:3, zone:'Madhapur Zone', proof:{type:'remark', text:'No empty bottle given today'} },
+  { id:'PD-2291', name:'Anjali Reddy', phone:'+91 98765 43210', area:'Kittu Nagar, Kondapur', addr:'Flat 402, Sri Sai Residency, Kittu Nagar Main Rd, Kondapur, Hyderabad – 500084', lat:17.4720, lng:78.3630, instr:'Leave with the security guard if gate is locked.', items:['Full Cream Milk x2','Curd 500g x1'], amount:210, payment:'COD', distanceKm:0.9, eta:'6 min', status:'ongoing', step:2, zone:'Kondapur Zone', proof:null },
+  { id:'PD-2295', name:'Sneha Rao', phone:'+91 98123 45566', area:'Kondapur', addr:'Flat 12B, Manjeera Trinity, Kondapur, Hyderabad – 500084', lat:17.4665, lng:78.3596, instr:'Behind the temple, blue gate.', items:['Toned Milk x2','Curd 500g x2'], amount:240, payment:'COD', distanceKm:0.6, eta:'4 min', status:'pending', step:0, zone:'Kondapur Zone', proof:null },
+  { id:'PD-2292', name:'Vikram Sharma', phone:'+91 91234 56780', area:'HITEC City', addr:'H.No 8-3-1122, Green Meadows Apartments, HITEC City, Hyderabad – 500081', lat:17.4483, lng:78.3792, instr:'Ring the bell twice, dog in the house.', items:['Toned Milk x1','Paneer 200g x1','Ghee 500ml x1'], amount:485, payment:'Prepaid', distanceKm:1.6, eta:'11 min', status:'pending', step:0, zone:'HITEC City Zone', proof:null },
+  { id:'PD-2293', name:'Fatima Sheikh', phone:'+91 90000 11223', area:'Gachibowli', addr:'Plot 44, Nest Enclave, Gachibowli, Hyderabad – 500032', lat:17.4401, lng:78.3489, instr:'Call before arriving, no bell.', items:['Buffalo Milk x1'], amount:70, payment:'COD', distanceKm:2.3, eta:'15 min', status:'pending', step:0, zone:'Gachibowli Zone', proof:null },
+  { id:'PD-2294', name:'Karthik Iyer', phone:'+91 99887 76655', area:'Madhapur', addr:'3-6-77, Ayyappa Society, Madhapur, Hyderabad – 500081', lat:17.4416, lng:78.3915, instr:'', items:['Full Cream Milk x1','Butter 100g x1'], amount:165, payment:'Prepaid', distanceKm:3.1, eta:'18 min', status:'delivered', step:3, zone:'Madhapur Zone', proof:{type:'remark', text:'No empty bottle given today'} },
 ];
+/* Fallback starting point (used only until real GPS lock is acquired) */
+const FALLBACK_RIDER_LOC = { lat:17.4560, lng:78.3690 };
+let riderLoc = null;      // { lat, lng, accuracy, heading, speed, ts } — set only from real GPS
+let riderWatchId = null;
+let riderLiveMap = null, riderLiveMarker = null, riderLiveAccCircle = null;
 
 const STEP_LABELS = ['Accepted','Picked Up','On the Way','Delivered'];
+
+/* =========================================================
+   LIVE GPS TRACKING — real device location via Geolocation API
+   Permission is asked once; if granted, tracking auto-resumes
+   on every app open (browser remembers the grant). Uses
+   watchPosition for continuous live updates (not a single fix).
+========================================================= */
+const GEO_STATE_KEY = 'pd_geo_permission_state'; // 'granted' | 'denied' | 'prompt'
+
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function startLiveTracking(){
+  if(!('geolocation' in navigator)){
+    showToast('GPS not supported on this device/browser');
+    return;
+  }
+  if(riderWatchId !== null) return; // already tracking
+  riderWatchId = navigator.geolocation.watchPosition(
+    (pos)=>{
+      try{ localStorage.setItem(GEO_STATE_KEY, 'granted'); }catch(e){}
+      riderLoc = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        heading: pos.coords.heading,
+        speed: pos.coords.speed,
+        ts: Date.now()
+      };
+      onRiderLocationUpdate();
+    },
+    (err)=>{
+      if(err.code === err.PERMISSION_DENIED){
+        try{ localStorage.setItem(GEO_STATE_KEY, 'denied'); }catch(e){}
+        setGpsStatusUI('denied');
+        showToast('Location permission denied — enable it in browser settings to track live delivery location');
+      } else {
+        setGpsStatusUI('error');
+      }
+    },
+    { enableHighAccuracy:true, maximumAge:2000, timeout:15000 }
+  );
+  setGpsStatusUI('locating');
+}
+
+function stopLiveTracking(){
+  if(riderWatchId !== null){
+    navigator.geolocation.clearWatch(riderWatchId);
+    riderWatchId = null;
+  }
+}
+
+function requestLiveTracking(){
+  // Triggers the native one-time browser permission prompt.
+  // Once granted, the browser remembers it — future app opens
+  // auto-resume tracking without asking again.
+  startLiveTracking();
+}
+
+/* Auto-resume tracking on load if permission was already granted before */
+function autoResumeTrackingIfGranted(){
+  let state = null;
+  try{ state = localStorage.getItem(GEO_STATE_KEY); }catch(e){}
+  if(state === 'granted'){
+    startLiveTracking();
+  } else if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name:'geolocation'}).then(res=>{
+      if(res.state === 'granted') startLiveTracking();
+      setGpsStatusUI(res.state === 'granted' ? 'live' : res.state);
+      res.onchange = ()=>{
+        if(res.state === 'granted') startLiveTracking();
+        else stopLiveTracking();
+        setGpsStatusUI(res.state);
+      };
+    }).catch(()=>{});
+  }
+}
+
+function setGpsStatusUI(state){
+  const dot = document.getElementById('gpsDot');
+  const label = document.getElementById('gpsStatusLabel');
+  if(!dot || !label) return;
+  const map = {
+    live:      { cls:'ok',   text:'Live GPS active' },
+    locating:  { cls:'busy', text:'Getting your location…' },
+    denied:    { cls:'off',  text:'Location off — tap to enable' },
+    prompt:    { cls:'off',  text:'Tap to start live tracking' },
+    error:     { cls:'off',  text:'GPS error — tap to retry' }
+  };
+  const s = map[state] || map.prompt;
+  dot.className = 'gps-dot ' + s.cls;
+  label.textContent = s.text;
+}
+
+/* Called on every real GPS fix */
+function onRiderLocationUpdate(){
+  setGpsStatusUI('live');
+  recalcLiveDistances();
+  updateLiveMapIfOpen();
+}
+
+/* =========================================================
+   REAL ROAD DISTANCE + ETA (OSRM — free, no API key)
+   Falls back to straight-line haversine if OSRM is unreachable.
+========================================================= */
+const routeCache = new Map(); // "lat1,lng1|lat2,lng2" -> {km, mins}
+async function getRoadRoute(fromLat, fromLng, toLat, toLng){
+  const key = `${fromLat.toFixed(4)},${fromLng.toFixed(4)}|${toLat.toFixed(4)},${toLng.toFixed(4)}`;
+  if(routeCache.has(key)) return routeCache.get(key);
+  try{
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.routes && data.routes[0]){
+      const r = {
+        km: data.routes[0].distance/1000,
+        mins: Math.round(data.routes[0].duration/60),
+        geometry: data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]])
+      };
+      routeCache.set(key, r);
+      return r;
+    }
+  }catch(e){ /* offline or blocked — fall back below */ }
+  const km = haversineKm(fromLat, fromLng, toLat, toLng);
+  const r = { km, mins: Math.round((km/28)*60), geometry: null }; // ~28km/h avg city fallback
+  routeCache.set(key, r);
+  return r;
+}
+
+/* Recompute every order's live distance/ETA from the rider's real GPS fix */
+let recalcInFlight = false;
+async function recalcLiveDistances(){
+  if(!riderLoc || recalcInFlight) return;
+  recalcInFlight = true;
+  const from = riderLoc;
+  await Promise.all(orders.filter(o=>o.status!=='delivered').map(async (o)=>{
+    const r = await getRoadRoute(from.lat, from.lng, o.lat, o.lng);
+    o.distanceKm = r.km;
+    o.eta = r.mins <= 1 ? '1 min' : r.mins + ' min';
+    o._route = r.geometry;
+  }));
+  recalcInFlight = false;
+  renderAll();
+}
 
 /* =========================================================
    NEAREST-FIRST ROUTE SEQUENCING (within this rider's zone)
@@ -934,9 +1121,44 @@ document.querySelectorAll('[data-goto]').forEach(el=>{
 });
 document.getElementById('navFab').addEventListener('click', ()=>{
   const active = orders.find(o=>o.status==='ongoing');
-  if(active){ openDetail(active.id); }
-  else { goToScreen('deliveries'); }
+  if(active){
+    openDetail(active.id);
+  } else {
+    goToScreen('deliveries');
+    showToast('No active delivery right now');
+  }
 });
+
+/* =========================================================
+   SOUND CUES (WebAudio — no external files needed)
+========================================================= */
+let audioCtx;
+function getAudioCtx(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq, start, dur, vol){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, ctx.currentTime+start);
+  gain.gain.linearRampToValueAtTime(vol, ctx.currentTime+start+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+start+dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(ctx.currentTime+start);
+  osc.stop(ctx.currentTime+start+dur+0.05);
+}
+function playChime(kind){
+  if(kind==='delivered'){ beep(880,0,.14,.18); beep(1180,.12,.18,.18); }
+  else if(kind==='next'){ beep(660,0,.1,.15); beep(880,.1,.1,.15); beep(1100,.2,.16,.16); }
+  else if(kind==='incoming'){ beep(740,0,.12,.16); beep(740,.22,.12,.16); }
+}
 
 /* =========================================================
    TOAST
@@ -967,9 +1189,8 @@ function countUp(el, to, prefix='', suffix='', dur=900){
 
 function refreshTopStats(){
   const delivered = orders.filter(o=>o.status==='delivered');
-  const earnings = delivered.reduce((s,o)=> s + Math.round(o.amount*0.12) + 25, 0);
-  countUp(document.getElementById('statEarnings'), earnings, '₹');
-  countUp(document.getElementById('statCount'), delivered.length);
+  countUp(document.getElementById('statCount'), orders.length);
+  countUp(document.getElementById('statDeliveries'), delivered.length);
   const dist = delivered.length * 1.6;
   document.getElementById('statDist').textContent = dist.toFixed(1) + ' km';
 }
@@ -1035,7 +1256,7 @@ function renderHero(){
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             Details
           </button>
-          <button class="ghost-btn" onclick="navigateTo('${active.name}')" style="flex:1; justify-content:center;">
+          <button class="ghost-btn" onclick="navigateTo('${active.id}')" style="flex:1; justify-content:center;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
             Navigate
           </button>
@@ -1113,8 +1334,30 @@ function completeDelivery(orderId, proof){
   const proofNote = proof && proof.type==='photo' ? ' Empty bottle photo uploaded.' : (proof && proof.type==='remark' ? ' Remark added (no bottle given).' : '');
   document.getElementById('successSub').textContent = `${o.name}'s order has been marked delivered. Payment: ${o.payment==='COD' ? '₹'+o.amount+' collected (COD)' : 'Already paid online'}.${proofNote}`;
   document.getElementById('successOverlay').classList.add('show');
+  playChime('delivered');
   closeDetail();
   renderAll();
+  autoOpenNextNearest();
+}
+
+/* =========================================================
+   AUTO-ADVANCE TO NEXT NEAREST ORDER (no manual accept)
+   These are monthly/weekly pre-paid subscription routes —
+   the partner just works through the sorted queue, so the
+   next nearest stop is auto-assigned right after a delivery.
+========================================================= */
+function autoOpenNextNearest(){
+  setTimeout(()=>{
+    const queue = sortedPendingQueue();
+    if(queue.length === 0) return;
+    const next = queue[0];
+    next.status = 'ongoing';
+    next.step = 1;
+    renderAll();
+    playChime('next');
+    showToast('Next stop auto-assigned: ' + next.name.split(' ')[0] + ' (' + distanceLabel(next.distanceKm) + ')');
+    openDetail(next.id);
+  }, 900);
 }
 
 /* =========================================================
@@ -1293,11 +1536,8 @@ function openDetail(orderId){
       </div>
     </div>
 
-    <div class="map-preview">
-      <div class="map-route"></div>
-      <div class="map-pin me"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></div>
-      <div class="map-pin dest"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/></svg></div>
-      <div class="map-badge">${distanceLabel(o.distanceKm)} &middot; ${o.eta}</div>
+    <div class="map-preview" id="detailMap">
+      <div class="map-badge" id="detailMapBadge">${distanceLabel(o.distanceKm)} &middot; ${o.eta}</div>
     </div>
 
     <div class="detail-block">
@@ -1357,7 +1597,7 @@ function openDetail(orderId){
     </div>` : ''}
 
     <div class="detail-cta-row">
-      <button class="cta-outline" onclick="navigateTo('${o.name}')">
+      <button class="cta-outline" onclick="navigateTo('${o.id}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
         Navigate
       </button>
@@ -1370,13 +1610,81 @@ function openDetail(orderId){
     ${o.status !== 'delivered' ? `<div class="report-link" onclick="showToast('Issue reported to support')">Report an issue with this delivery</div>` : ''}
   `;
   document.getElementById('detailBackdrop').classList.add('show');
+  initDetailMap(o);
 }
 function closeDetail(){
   document.getElementById('detailBackdrop').classList.remove('show');
+  destroyDetailMap();
 }
 document.getElementById('detailBackdrop').addEventListener('click', (e)=>{
   if(e.target.id==='detailBackdrop') closeDetail();
 });
+
+/* =========================================================
+   REAL LEAFLET MAP (OpenStreetMap tiles, free, no API key)
+   Shows the rider's live GPS position + the customer pin,
+   draws the actual road route, and live-updates as GPS moves.
+========================================================= */
+let detailMapInstance = null, detailMapMarkerMe = null, detailMapMarkerDest = null, detailMapRouteLine = null;
+function initDetailMap(order){
+  destroyDetailMap();
+  const el = document.getElementById('detailMap');
+  if(!el || typeof L === 'undefined') return;
+  const start = riderLoc || FALLBACK_RIDER_LOC;
+  const map = L.map(el, { zoomControl:false, attributionControl:false }).setView([start.lat, start.lng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+  L.control.attribution({ prefix:false, position:'bottomright' }).addAttribution('© OpenStreetMap').addTo(map);
+
+  const meIcon = L.divIcon({ className:'', html:'<div class="live-me-pin"></div>', iconSize:[18,18] });
+  const destIcon = L.divIcon({ className:'', html:'<div class="live-dest-pin"></div>', iconSize:[26,26], iconAnchor:[13,26] });
+
+  detailMapMarkerMe = L.marker([start.lat, start.lng], { icon:meIcon }).addTo(map);
+  detailMapMarkerDest = L.marker([order.lat, order.lng], { icon:destIcon }).addTo(map);
+  map.fitBounds([[start.lat,start.lng],[order.lat,order.lng]], { padding:[36,36] });
+
+  detailMapInstance = map;
+  detailMapInstance._orderRef = order;
+
+  if(order._route && order._route.length){
+    detailMapRouteLine = L.polyline(order._route, { color:'#2F7FE0', weight:4, opacity:.85 }).addTo(map);
+  }
+
+  if(!riderLoc){
+    requestLiveTracking();
+  }
+}
+function destroyDetailMap(){
+  if(detailMapInstance){ detailMapInstance.remove(); detailMapInstance = null; }
+  detailMapMarkerMe = null; detailMapMarkerDest = null; detailMapRouteLine = null;
+}
+function updateLiveMapIfOpen(){
+  if(!detailMapInstance || !riderLoc) return;
+  const order = detailMapInstance._orderRef;
+  detailMapMarkerMe.setLatLng([riderLoc.lat, riderLoc.lng]);
+  if(order._route && order._route.length){
+    if(detailMapRouteLine) detailMapRouteLine.setLatLngs(order._route);
+    else detailMapRouteLine = L.polyline(order._route, { color:'#2F7FE0', weight:4, opacity:.85 }).addTo(detailMapInstance);
+  }
+  const badge = document.getElementById('detailMapBadge');
+  if(badge) badge.textContent = distanceLabel(order.distanceKm) + ' · ' + order.eta;
+  checkProximity(order);
+}
+
+/* =========================================================
+   PROXIMITY CHECK — "near" detection from live GPS
+========================================================= */
+const NEAR_THRESHOLD_KM = 0.15; // ~150m counts as "arrived"
+let lastNearNotified = null;
+function checkProximity(order){
+  if(!riderLoc || order.status !== 'ongoing') return;
+  const d = haversineKm(riderLoc.lat, riderLoc.lng, order.lat, order.lng);
+  if(d <= NEAR_THRESHOLD_KM && lastNearNotified !== order.id){
+    lastNearNotified = order.id;
+    showToast('You are near ' + order.name.split(' ')[0] + "'s location");
+    playChime('next');
+  }
+}
+
 
 function acceptOrder(orderId){
   const alreadyOngoing = orders.find(o=>o.status==='ongoing');
@@ -1394,10 +1702,16 @@ function acceptOrder(orderId){
 }
 
 function callCustomer(phone){
+  const tel = phone.replace(/\s+/g,'');
   showToast('Calling ' + phone + '…');
+  window.location.href = 'tel:' + tel;
 }
-function navigateTo(name){
-  showToast('Opening navigation to ' + name.split(' ')[0] + "'s location…");
+function navigateTo(orderIdOrName){
+  const o = orders.find(x=>x.id===orderIdOrName) || orders.find(x=>x.name===orderIdOrName);
+  const dest = o ? o.addr : orderIdOrName;
+  showToast('Opening Google Maps navigation…');
+  const url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dest) + '&travelmode=driving';
+  window.open(url, '_blank');
 }
 
 /* OTP auto-advance */
@@ -1442,9 +1756,10 @@ function showIncomingOrder(){
   const sub = document.getElementById('incomingSub');
   const pending = orders.find(o=>o.status==='pending');
   amt.textContent = pending ? '₹'+pending.amount : '₹210';
-  sub.textContent = pending ? pending.area + ' · ' + pending.distance + ' away' : 'Kondapur · 1.2 km away';
+  sub.textContent = pending ? pending.area + ' · ' + distanceLabel(pending.distanceKm) + ' away' : 'Kondapur · 1.2 km away';
   backdrop.classList.add('show');
   navFabPulse(true);
+  playChime('incoming');
 
   const ring = document.getElementById('ringFg');
   const num = document.getElementById('ringNum');
@@ -1546,6 +1861,62 @@ function renderAll(){
   refreshTopStats();
   renderEarnings();
 }
+
+/* =========================================================
+   MANUAL REFRESH (in-app, no page reload)
+========================================================= */
+const refreshBtnEl = document.getElementById('refreshBtn');
+if(refreshBtnEl){
+  refreshBtnEl.addEventListener('click', ()=>{
+    const icon = document.getElementById('refreshIcon');
+    icon.style.transition = 'transform .6s ease';
+    icon.style.transform = 'rotate(360deg)';
+    renderAll();
+    showToast('Updated');
+    setTimeout(()=>{ icon.style.transition='none'; icon.style.transform='rotate(0deg)'; }, 620);
+  });
+}
+
+/* =========================================================
+   BLOCK BROWSER PULL-TO-REFRESH (no accidental page reloads)
+   Body is position:fixed (see CSS) so the page itself never
+   scrolls — only elements with their own overflow-y:auto do
+   (.screen, .detail-sheet, .leaflet-container, etc). This
+   touch guard is a second layer: it blocks the down-swipe
+   ONLY when the nearest actually-scrollable ancestor is
+   already scrolled to its top (or there isn't one), which is
+   the exact gesture Chrome/Safari interpret as "pull to
+   refresh". Normal scrolling inside lists/sheets/the map is
+   left untouched.
+========================================================= */
+(function preventPullToRefresh(){
+  let startY = 0;
+  let blocking = false;
+
+  function findScrollableAncestor(node){
+    while(node && node !== document.body && node.nodeType === 1){
+      const style = window.getComputedStyle(node);
+      const canScrollY = /(auto|scroll)/.test(style.overflowY);
+      if(canScrollY && node.scrollHeight > node.clientHeight) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) { blocking = false; return; }
+    startY = e.touches[0].clientY;
+    const scrollEl = findScrollableAncestor(e.target);
+    // Block if there's no scrollable ancestor at all, OR it's already at the top.
+    blocking = !scrollEl || scrollEl.scrollTop <= 0;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', (e)=>{
+    if(!blocking || e.touches.length !== 1) return;
+    const pullingDown = e.touches[0].clientY - startY > 0;
+    if(pullingDown) e.preventDefault();
+  }, {passive:false});
+})();
 
 /* =========================================================
    GENERIC INFO SHEET (reuses the order-detail sheet shell)
@@ -1816,17 +2187,34 @@ function attemptVerifyOtp(){
   }, 700);
 }
 
-function completeLogin(){
+function completeLogin(isAutoLogin){
   try{ localStorage.setItem('pd_partner_logged_in', '1'); }catch(e){}
   clearInterval(resendTimer);
-  document.getElementById('authOverlay').style.transition = 'opacity .35s ease';
+  document.getElementById('authOverlay').style.transition = isAutoLogin ? 'none' : 'opacity .35s ease';
   document.getElementById('authOverlay').style.opacity = '0';
+  const delay = isAutoLogin ? 0 : 350;
   setTimeout(()=>{
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('app').classList.add('reveal');
     bootApp();
-    showToast('Welcome back, Ravi! 👋');
-  }, 350);
+    if(!isAutoLogin) showToast('Welcome back, Ravi! 👋');
+  }, delay);
+}
+
+/* =========================================================
+   SESSION PERSISTENCE CONTRACT
+   The partner stays logged in indefinitely (localStorage flag),
+   surviving browser/app restarts, until EITHER:
+     1. They tap "Log Out" themselves (logoutUser() below), or
+     2. The backend/admin force-revokes the session — call
+        forceLogoutByAdmin(reason) below when wiring a real API
+        (e.g. after a 401 from the server, or a push signal that
+        an admin deactivated this partner's account).
+   Nothing else in this file clears the session automatically.
+========================================================= */
+function forceLogoutByAdmin(reason){
+  logoutUser();
+  showToast(reason || 'Your account access was removed by admin');
 }
 
 function logoutUser(){
@@ -1834,6 +2222,7 @@ function logoutUser(){
   closeDetail();
   clearTimeout(incomingTimer);
   hideIncomingOrder();
+  stopLiveTracking();
   document.getElementById('app').classList.remove('reveal');
   const overlay = document.getElementById('authOverlay');
   overlay.style.display = 'flex';
@@ -1850,18 +2239,23 @@ function bootApp(){
   appBooted = true;
   renderAll();
   scheduleIncomingOrder();
+  autoResumeTrackingIfGranted();
 }
 
-/* Boot sequence: splash → (skip login if remembered) → login */
-setTimeout(()=>{
+/* Boot sequence: check remembered login FIRST (before any splash/login
+   view can flash on screen). Only truly logged-out users see splash→login. */
+(function boot(){
   let remembered = false;
   try{ remembered = localStorage.getItem('pd_partner_logged_in') === '1'; }catch(e){}
+
   if(remembered){
-    completeLogin();
+    // Silent auto-login: brief splash for smoothness, then straight into
+    // the app — never touches or shows the login/OTP screens.
+    setTimeout(()=> completeLogin(true), 700);
   } else {
-    showAuthView('view-login');
+    setTimeout(()=> showAuthView('view-login'), 1600);
   }
-}, 1600);
+})();
 </script>
 </body>
 </html>
