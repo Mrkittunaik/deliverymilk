@@ -341,6 +341,79 @@
   .payout-date{font-size:10.5px; color:var(--muted); margin-top:1px;}
   .payout-amt{font-size:13px; font-weight:800; color:var(--green-dim);}
 
+  /* ---------- SUBSCRIPTIONS SCREEN ---------- */
+  .sub-topline{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .sub-back{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--line); background:var(--card);
+    display:flex; align-items:center; justify-content:center; color:var(--ink); flex-shrink:0; cursor:pointer;
+    transition:transform .15s ease; padding:0;
+  }
+  .sub-back:active{transform:scale(.88);}
+  .sub-cust-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-bottom:16px; -ms-overflow-style:none; scrollbar-width:none;}
+  .sub-cust-row::-webkit-scrollbar{display:none;}
+  .sub-chip{
+    flex-shrink:0; padding:9px 14px; border-radius:20px; border:1px solid var(--line); background:var(--card);
+    font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; transition:.18s ease; white-space:nowrap;
+  }
+  .sub-chip.active{background:var(--ink); border-color:var(--ink); color:#FFF8E4; box-shadow:0 4px 12px rgba(43,36,16,.22);}
+  .sub-chip .tag{font-size:9.5px; opacity:.75; margin-left:4px;}
+
+  .sub-hero{
+    position:relative; overflow:hidden; border-radius:14px; padding:20px;
+    background:linear-gradient(150deg,var(--green) 0%,var(--green-dim) 100%);
+    color:#fff; box-shadow:0 10px 26px rgba(60,146,87,.28);
+    animation:cardIn .35s ease both;
+  }
+  .sub-hero::after{content:''; position:absolute; right:-30px; bottom:-46px; width:150px; height:150px; border-radius:50%; background:rgba(255,255,255,.09);}
+  .sub-hero-top{display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1;}
+  .sub-hero .lbl{font-size:11.5px; font-weight:700; opacity:.88;}
+  .sub-hero .num{font-size:32px; font-weight:800; margin-top:3px; line-height:1;}
+  .sub-hero .num .unit{font-size:15px; font-weight:700; margin-left:3px; opacity:.85;}
+  .sub-hero .sub{font-size:11px; opacity:.82; margin-top:5px;}
+  .sub-ring-wrap{position:relative; width:72px; height:72px; flex-shrink:0;}
+  .sub-ring-wrap svg{transform:rotate(-90deg);}
+  .subring-bg{fill:none; stroke:rgba(255,255,255,.25); stroke-width:6;}
+  .subring-fg{fill:none; stroke:#fff; stroke-width:6; stroke-linecap:round; stroke-dasharray:188.5; stroke-dashoffset:188.5; transition:stroke-dashoffset .8s cubic-bezier(.22,.9,.3,1);}
+  .sub-ring-pct{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;}
+  .sub-bank-note{
+    position:relative; z-index:1; margin-top:14px; padding:9px 11px; border-radius:8px;
+    background:rgba(255,255,255,.16); font-size:11px; font-weight:700; display:flex; align-items:center; gap:6px;
+    animation:pulseBank 1.6s ease infinite;
+  }
+  @keyframes pulseBank{0%,100%{opacity:1;} 50%{opacity:.72;}}
+
+  .sub-stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px;}
+  .sub-mini-stat{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 8px; text-align:center;}
+  .sub-mini-stat .v{font-size:14px; font-weight:800; color:var(--ink);}
+  .sub-mini-stat .l{font-size:9px; font-weight:700; color:var(--muted); margin-top:2px;}
+
+  .sub-legend{display:flex; gap:9px; flex-wrap:wrap; font-size:9.5px; font-weight:700; color:var(--muted);}
+  .sub-legend span{display:flex; align-items:center; gap:3px;}
+  .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
+  .dot-del{background:var(--green);}
+  .dot-skip{background:#D9CBA0;}
+  .dot-extra{background:var(--blue);}
+  .dot-pend{background:var(--yellow);}
+
+  .sub-cal-wrap{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px;}
+  .sub-cal-dow{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px;}
+  .sub-cal-dow span{text-align:center; font-size:9.5px; font-weight:700; color:var(--muted);}
+  .sub-cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .sub-day{
+    position:relative; aspect-ratio:1; border-radius:7px; display:flex; align-items:center; justify-content:center;
+    font-size:10.5px; font-weight:700; color:var(--ink); background:var(--bg); cursor:default;
+    animation:cardIn .3s ease both;
+  }
+  .sub-day.empty{visibility:hidden;}
+  .sub-day.delivered{background:var(--green-light); color:var(--green-dim);}
+  .sub-day.skipped{background:#F5EFDC; color:#B3A063; text-decoration:line-through; text-decoration-thickness:1.4px;}
+  .sub-day.extra{background:var(--blue-light); color:var(--blue); box-shadow:inset 0 0 0 1.5px var(--blue);}
+  .sub-day.pending{background:#FFF7DE; color:var(--yellow-deep); opacity:.85;}
+  .sub-day.today{box-shadow:0 0 0 2px var(--ink); cursor:pointer;}
+  .sub-day.today:active{transform:scale(.9);}
+  .sub-day .mk{position:absolute; top:1px; right:2px; font-size:6.5px; font-weight:800; letter-spacing:.2px; opacity:.8;}
+  .sub-hint{font-size:10.5px; color:var(--muted); text-align:center; margin-top:12px; font-weight:600; line-height:1.5;}
+
   /* ---------- ACCOUNT SCREEN ---------- */
   .account-header{
     display:flex; align-items:center; gap:14px; margin-bottom:18px; background:var(--card);
@@ -826,10 +899,72 @@
       <div class="settings-row" onclick="openDocsInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>Documents<span class="arrow">›</span></div>
       <div class="settings-row" onclick="openSupportInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>Help &amp; Support<span class="arrow">›</span></div>
       <div class="settings-row" onclick="openRatingsInfo()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l.77.78L12 20.66l7.65-7.65.77-.78a5.4 5.4 0 0 0 0-7.65z"/></svg></div>Ratings &amp; Reviews<span class="arrow">›</span></div>
+      <div class="settings-row" onclick="goToScreen('subscriptions')"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>Customer Subscriptions<span class="arrow">›</span></div>
     </div>
     <div class="settings-group">
       <div class="settings-row danger" onclick="logoutUser()"><div class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>Log Out</div>
     </div>
+  </div>
+
+  <!-- ================= SUBSCRIPTIONS SCREEN ================= -->
+  <div class="screen" id="screen-subscriptions">
+    <div class="sub-topline">
+      <button class="sub-back" onclick="goToScreen('account')" aria-label="Back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="section-title">Customer Subscriptions</div>
+    </div>
+
+    <div class="sub-cust-row" id="subCustRow"></div>
+
+    <div class="sub-hero" id="subHero">
+      <div class="sub-hero-top">
+        <div>
+          <div class="lbl">Remaining this cycle</div>
+          <div class="num"><span id="subRemainL">0.0</span><span class="unit">L</span></div>
+          <div class="sub" id="subHeroSub">of 0.0 L plan</div>
+        </div>
+        <div class="sub-ring-wrap">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle class="subring-bg" cx="36" cy="36" r="30"/>
+            <circle class="subring-fg" id="subRing" cx="36" cy="36" r="30"/>
+          </svg>
+          <div class="sub-ring-pct" id="subRingPct">0%</div>
+        </div>
+      </div>
+      <div class="sub-bank-note" id="subBankNote" style="display:none;"></div>
+    </div>
+
+    <div class="sub-stat-grid">
+      <div class="sub-mini-stat">
+        <div class="v" id="subPlanQty">500 ml</div>
+        <div class="l">Daily plan</div>
+      </div>
+      <div class="sub-mini-stat">
+        <div class="v" id="subDelivDays">0</div>
+        <div class="l">Delivered days</div>
+      </div>
+      <div class="sub-mini-stat">
+        <div class="v" id="subSkipDays">0</div>
+        <div class="l">Skipped days</div>
+      </div>
+    </div>
+
+    <div class="section-head"><div class="section-title">This Month</div>
+      <div class="sub-legend">
+        <span><i class="dot dot-del"></i>Delivered</span>
+        <span><i class="dot dot-skip"></i>Skipped</span>
+        <span><i class="dot dot-extra"></i>Carried</span>
+        <span><i class="dot dot-pend"></i>Upcoming</span>
+      </div>
+    </div>
+    <div class="sub-cal-wrap">
+      <div class="sub-cal-dow">
+        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+      </div>
+      <div class="sub-cal-grid" id="subCalGrid"></div>
+    </div>
+    <div class="sub-hint" id="subHint">Tap today's cell to simulate a skip and watch the balance auto-adjust.</div>
   </div>
 
   <!-- ================= BOTTOM NAV ================= -->
@@ -1181,6 +1316,137 @@ document.getElementById('navFab').addEventListener('click', ()=>{
 });
 
 /* =========================================================
+   SUBSCRIPTION ENGINE
+   ---------------------------------------------------------
+   Rule: every plan (500ml/day or 1L/day, same logic for both)
+   has a fixed cycle total = dailyQty × cycle length. A skipped
+   day's milk is never lost and never duplicated — it is banked
+   in full and delivered in one shot, added completely on top
+   of the very next day the customer actually receives milk.
+   Cycle start/end dates are fixed and marked on the calendar,
+   so the total delivered across the cycle always reconciles to
+   the exact ml the customer paid for — down to the last ml.
+========================================================= */
+function isoDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function todayMidnight(){
+  const t = new Date(); t.setHours(0,0,0,0); return t;
+}
+const SUB_TODAY = todayMidnight();
+
+function makeSub(id, name, planMl, startOffsetDays, cycleDays, skipOffsets){
+  const start = new Date(SUB_TODAY); start.setDate(start.getDate() + startOffsetDays);
+  const end = new Date(start); end.setDate(end.getDate() + cycleDays - 1);
+  const skips = new Set(skipOffsets.map(off=>{
+    const d = new Date(start); d.setDate(d.getDate()+off); return isoDate(d);
+  }));
+  return { id, name, planMl, start, end, skips };
+}
+
+// Two demo customers on the exact same engine — one 500ml/day plan,
+// one 1L/day plan — proving the calculation logic is identical for both.
+const subscriptions = [
+  makeSub('sub-500', 'Anjali Reddy', 500, -6, 30, [-3, -1]),
+  makeSub('sub-1l', 'Vikram Sharma', 1000, -6, 30, [-4]),
+];
+let currentSubId = subscriptions[0].id;
+
+function buildSchedule(sub){
+  const days = [];
+  let bankedMl = 0;
+  const cur = new Date(sub.start);
+  while(cur <= sub.end){
+    const iso = isoDate(cur);
+    let status, qty;
+    if(cur > SUB_TODAY){
+      status = 'pending'; qty = sub.planMl;
+    } else if(sub.skips.has(iso)){
+      status = 'skipped'; qty = 0; bankedMl += sub.planMl;
+    } else if(bankedMl > 0){
+      status = 'extra'; qty = sub.planMl + bankedMl; bankedMl = 0;
+    } else {
+      status = 'delivered'; qty = sub.planMl;
+    }
+    days.push({ date:new Date(cur), iso, status, qty, isStart: iso===isoDate(sub.start), isEnd: iso===isoDate(sub.end), isToday: iso===isoDate(SUB_TODAY) });
+    cur.setDate(cur.getDate()+1);
+  }
+  const totalMl = sub.planMl * days.length;
+  const deliveredMl = days.filter(d=>d.date<=SUB_TODAY).reduce((s,d)=>s+d.qty,0);
+  const deliveredDays = days.filter(d=>d.status==='delivered'||d.status==='extra').length;
+  const skippedDays = days.filter(d=>d.status==='skipped').length;
+  return { days, totalMl, deliveredMl, remainingMl: totalMl - deliveredMl, bankedMl, deliveredDays, skippedDays };
+}
+
+function renderSubscriptions(){
+  const row = document.getElementById('subCustRow');
+  if(!row) return;
+  row.innerHTML = subscriptions.map(s=>
+    `<div class="sub-chip ${s.id===currentSubId?'active':''}" onclick="selectSub('${s.id}')">${s.name}<span class="tag">${s.planMl>=1000 ? (s.planMl/1000)+'L' : s.planMl+'ml'}/day</span></div>`
+  ).join('');
+
+  const sub = subscriptions.find(s=>s.id===currentSubId);
+  const sched = buildSchedule(sub);
+
+  document.getElementById('subPlanQty').textContent = (sub.planMl>=1000 ? (sub.planMl/1000)+' L' : sub.planMl+' ml') + ' / day';
+  document.getElementById('subDelivDays').textContent = sched.deliveredDays;
+  document.getElementById('subSkipDays').textContent = sched.skippedDays;
+  document.getElementById('subHeroSub').textContent = 'of ' + (sched.totalMl/1000).toFixed(1) + ' L plan (' + sched.days.length + ' days)';
+
+  countUpDecimal(document.getElementById('subRemainL'), sched.remainingMl/1000, 700);
+  const pct = Math.max(0, Math.min(100, (sched.deliveredMl/sched.totalMl)*100));
+  const ring = document.getElementById('subRing');
+  const circumference = 188.5;
+  ring.style.strokeDashoffset = circumference - (circumference*pct/100);
+  document.getElementById('subRingPct').textContent = Math.round(pct)+'%';
+
+  const bankNote = document.getElementById('subBankNote');
+  if(sched.bankedMl > 0){
+    bankNote.style.display = 'flex';
+    bankNote.innerHTML = '⚡ ' + sched.bankedMl + ' ml banked from a skipped day — added in full to the next delivery, nothing lost.';
+  } else {
+    bankNote.style.display = 'none';
+  }
+
+  const grid = document.getElementById('subCalGrid');
+  const firstDow = (sub.start.getDay()+6)%7; // Monday=0
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += '<div class="sub-day empty"></div>';
+  sched.days.forEach(d=>{
+    const cls = ['sub-day', d.status];
+    if(d.isToday) cls.push('today');
+    const mk = d.isStart ? '<span class="mk">S</span>' : (d.isEnd ? '<span class="mk">E</span>' : '');
+    const click = d.isToday ? `onclick="toggleTodaySkip('${sub.id}')"` : '';
+    html += `<div class="${cls.join(' ')}" ${click}>${mk}${d.date.getDate()}</div>`;
+  });
+  grid.innerHTML = html;
+
+  const hint = document.getElementById('subHint');
+  const todayDay = sched.days.find(d=>d.isToday);
+  hint.textContent = todayDay
+    ? (todayDay.status==='skipped' ? "Today is marked skipped — tap to restore today's delivery." : 'Tap today\'s cell to simulate a skip and watch the balance auto-adjust.')
+    : 'S marks the plan start date, E marks the plan end date.';
+}
+
+function selectSub(id){
+  currentSubId = id;
+  renderSubscriptions();
+}
+
+function toggleTodaySkip(subId){
+  const sub = subscriptions.find(s=>s.id===subId);
+  const iso = isoDate(SUB_TODAY);
+  if(sub.skips.has(iso)){
+    sub.skips.delete(iso);
+    showToast("Today's delivery restored");
+  } else {
+    sub.skips.add(iso);
+    showToast('Today skipped — ' + sub.planMl + ' ml banked for the next delivery');
+  }
+  renderSubscriptions();
+}
+
+/* =========================================================
    SOUND CUES (WebAudio — no external files needed)
 ========================================================= */
 let audioCtx;
@@ -1233,6 +1499,17 @@ function countUp(el, to, prefix='', suffix='', dur=900){
     const eased = 1 - Math.pow(1-p, 3);
     const val = Math.round(to*eased);
     el.textContent = prefix + val.toLocaleString('en-IN') + suffix;
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function countUpDecimal(el, to, dur=700){
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now-start)/dur);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = (to*eased).toFixed(1);
     if(p < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
@@ -1911,6 +2188,7 @@ function renderAll(){
   renderNavBadge();
   refreshTopStats();
   renderEarnings();
+  renderSubscriptions();
 }
 
 /* =========================================================
