@@ -6,6 +6,7 @@
 <title>Pakka Doodhwala — Delivery Partner</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <link rel="stylesheet" href="styles.css">
+<script>window.MILK_API_BASE = window.MILK_API_BASE || 'https://pakkabackend.onrender.com';</script>
 </head>
 <body>
 
@@ -23,7 +24,7 @@
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
     </div>
     <div class="auth-heading">Partner Login</div>
-    <div class="auth-subtext">Enter your registered mobile number to receive a one-time password.</div>
+    <div class="auth-subtext">Enter your registered mobile number and password.</div>
     <div class="auth-field-wrap">
       <div class="field-label">Mobile Number</div>
       <div class="phone-field">
@@ -31,39 +32,51 @@
         <input type="tel" id="loginPhone" placeholder="98765 43210" maxlength="10" inputmode="numeric">
       </div>
     </div>
-    <button class="auth-cta" id="sendOtpBtn">
-      Send OTP
+    <div class="auth-field-wrap">
+      <div class="field-label">Password</div>
+      <div class="phone-field">
+        <input type="password" id="loginPassword" placeholder="Password" style="border:none; outline:none; width:100%; font:inherit; background:transparent;">
+      </div>
+    </div>
+    <button class="auth-cta" id="loginBtn">
+      Log In
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
+    <div class="change-num-link" id="goToRegisterLink">
+      New partner? Register here
+    </div>
     <div class="auth-foot">By continuing, you agree to Pakka Doodhwala's <b>Terms of Service</b> and <b>Privacy Policy</b>.</div>
   </div>
 
-  <div class="auth-view" id="view-otp">
+  <div class="auth-view" id="view-register">
     <div class="auth-top-ic" style="background:var(--green-light); color:var(--green-dim);">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
-    <div class="auth-heading">Verify OTP</div>
-    <div class="auth-subtext">Enter the 6-digit code sent to <b id="otpPhoneShown" style="color:var(--ink);">+91 98765 43210</b></div>
-    <div class="otp-field-row" id="loginOtpRow">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
-      <input class="otp-box" maxlength="1" inputmode="numeric">
+    <div class="auth-heading">Partner Registration</div>
+    <div class="auth-subtext">Create your delivery partner account.</div>
+    <div class="auth-field-wrap">
+      <div class="field-label">Full Name</div>
+      <div class="phone-field">
+        <input type="text" id="regName" placeholder="Your name" style="border:none; outline:none; width:100%; font:inherit; background:transparent;">
+      </div>
     </div>
-    <div class="otp-hint" style="justify-content:center; gap:6px; margin-top:8px;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <span>Demo mode — use OTP <b style="color:var(--ink);">123456</b></span>
+    <div class="auth-field-wrap">
+      <div class="field-label">Mobile Number</div>
+      <div class="phone-field">
+        <span class="phone-cc">🇮🇳 +91</span>
+        <input type="tel" id="regPhone" placeholder="98765 43210" maxlength="10" inputmode="numeric">
+      </div>
     </div>
-    <div class="otp-hint">
-      <span id="resendTimerText">Resend code in <b id="resendSecs">30</b>s</span>
-      <span class="resend-link disabled" id="resendLink">Resend OTP</span>
+    <div class="auth-field-wrap">
+      <div class="field-label">Password</div>
+      <div class="phone-field">
+        <input type="password" id="regPassword" placeholder="Choose a password" style="border:none; outline:none; width:100%; font:inherit; background:transparent;">
+      </div>
     </div>
-    <button class="auth-cta" id="verifyOtpBtn">Verify &amp; Continue</button>
-    <div class="change-num-link" id="changeNumLink">
+    <button class="auth-cta" id="registerBtn">Create Account</button>
+    <div class="change-num-link" id="backToLoginLink">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Change mobile number
+      Back to login
     </div>
   </div>
 </div>
@@ -357,6 +370,8 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="api.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
