@@ -87,11 +87,45 @@
     // ---- orders ----
     // "my" orders = orders assigned to / offered to this partner. The
     // backend scopes /orders to the caller's role via the JWT, same as
-    // it does for the customer webapp and the admin panel.
+    // it does for the customer webapp and the admin panel. This list
+    // includes both admin-assigned stops and broadcast-accepted ones.
     listMyOrders: () => get('/orders'),
     getOrder: (id) => get(`/orders/${id}`),
     respondToOrder: (id, action) => patch(`/orders/${id}/respond`, { action }), // action: 'accept' | 'reject'
     updateOrderStatus: (id, status) => patch(`/orders/${id}/status`, { status }),
+
+    // ---- subscription bottle-exchange delivery ----
+    // Completes a subscription stop with dual proof-of-exchange photos
+    // (new bottle handed over + old bottle collected) instead of the
+    // single generic proof used for one-off product orders.
+    completeBottleExchange: (subId, data) => {
+      const form = new FormData();
+      if (data.newBottlePhoto) form.append('newBottlePhoto', data.newBottlePhoto);
+      if (data.oldBottlePhoto) form.append('oldBottlePhoto', data.oldBottlePhoto);
+      form.append('newBottleQty', data.newBottleQty);
+      form.append('oldBottleQtyCollected', data.oldBottleQtyCollected);
+      if (data.note) form.append('note', data.note);
+      return requestForm(`/subscriptions/${subId}/deliver`, form);
+    },
+    // Logs that the customer didn't have the old bottle(s) ready today -
+    // backend carries the count forward so tomorrow's stop knows to
+    // collect the extra bottle(s) on top of that day's usual pickup.
+    reportBottleNotReturned: (subId, data) => post(`/subscriptions/${subId}/bottle-not-returned`, data),
+    // Raises a ticket for admin review (broken/damaged bottle claimed by
+    // customer). Admin approving it is what actually debits the wallet -
+    // this call only files the claim.
+    raiseBottleTicket: (subId, data) => {
+      const form = new FormData();
+      if (data.photo) form.append('photo', data.photo);
+      form.append('reason', data.reason);
+      if (data.note) form.append('note', data.note);
+      return requestForm(`/subscriptions/${subId}/bottle-ticket`, form);
+    },
+    // Pending-bottle ledger for this rider's route today (how many old
+    // bottles are owed per subscription from previous missed pickups).
+    // Falls back to purely local tracking (pendingBottles.js) if this
+    // endpoint isn't available yet on the backend.
+    getPendingBottles: () => get('/delivery-boys/me/pending-bottles'),
 
     // ---- realtime ----
     // Mirrors miLKadmin/api.js's retry pattern for a slow/cold-starting
