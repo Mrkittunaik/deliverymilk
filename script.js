@@ -7,13 +7,58 @@ const AVATAR_COLORS = ['#4CAF6D','#2F7FE0','#E8A400','#E0503C','#8A6FD1','#3C925
 function colorFor(i){ return AVATAR_COLORS[i % AVATAR_COLORS.length]; }
 function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
 
-let orders = [
-  { id:'PD-2291', name:'Anjali Reddy', phone:'+91 98765 43210', area:'Kittu Nagar, Kondapur', addr:'Flat 402, Sri Sai Residency, Kittu Nagar Main Rd, Kondapur, Hyderabad – 500084', lat:17.4720, lng:78.3630, instr:'Leave with the security guard if gate is locked.', items:['Full Cream Milk x2','Curd 500g x1'], amount:210, payment:'COD', distanceKm:0.9, eta:'6 min', status:'ongoing', step:2, zone:'Kondapur Zone', proof:null },
-  { id:'PD-2295', name:'Sneha Rao', phone:'+91 98123 45566', area:'Kondapur', addr:'Flat 12B, Manjeera Trinity, Kondapur, Hyderabad – 500084', lat:17.4665, lng:78.3596, instr:'Behind the temple, blue gate.', items:['Toned Milk x2','Curd 500g x2'], amount:240, payment:'COD', distanceKm:0.6, eta:'4 min', status:'pending', step:0, zone:'Kondapur Zone', proof:null },
-  { id:'PD-2292', name:'Vikram Sharma', phone:'+91 91234 56780', area:'HITEC City', addr:'H.No 8-3-1122, Green Meadows Apartments, HITEC City, Hyderabad – 500081', lat:17.4483, lng:78.3792, instr:'Ring the bell twice, dog in the house.', items:['Toned Milk x1','Paneer 200g x1','Ghee 500ml x1'], amount:485, payment:'Prepaid', distanceKm:1.6, eta:'11 min', status:'pending', step:0, zone:'HITEC City Zone', proof:null },
-  { id:'PD-2293', name:'Fatima Sheikh', phone:'+91 90000 11223', area:'Gachibowli', addr:'Plot 44, Nest Enclave, Gachibowli, Hyderabad – 500032', lat:17.4401, lng:78.3489, instr:'Call before arriving, no bell.', items:['Buffalo Milk x1'], amount:70, payment:'COD', distanceKm:2.3, eta:'15 min', status:'pending', step:0, zone:'Gachibowli Zone', proof:null },
-  { id:'PD-2294', name:'Karthik Iyer', phone:'+91 99887 76655', area:'Madhapur', addr:'3-6-77, Ayyappa Society, Madhapur, Hyderabad – 500081', lat:17.4416, lng:78.3915, instr:'', items:['Full Cream Milk x1','Butter 100g x1'], amount:165, payment:'Prepaid', distanceKm:3.1, eta:'18 min', status:'delivered', step:3, zone:'Madhapur Zone', proof:{type:'remark', text:'No empty bottle given today'} },
-];
+/* Orders are now loaded from the real backend (see loadOrdersFromServer()
+   below) via the shared Api client (api.js) - same backend miLKadmin and
+   milkwebapp use. This starts empty and is populated on login/boot. */
+let orders = [];
+
+/* Maps a raw backend order (see milkwebapp/js/api.js ordersApi / ordersApi
+   payload shape) into the shape this UI's render functions expect. Backend
+   field names are best-effort mapped; unknown/missing fields fall back to
+   sane defaults so the UI doesn't crash on partial data. */
+function mapServerOrder(o){
+  const addr = o.address || o.deliveryAddress || (o.addressObj && o.addressObj.line1) || '';
+  const lat = (o.lat ?? o.location?.lat ?? o.deliveryLat ?? FALLBACK_RIDER_LOC.lat);
+  const lng = (o.lng ?? o.location?.lng ?? o.deliveryLng ?? FALLBACK_RIDER_LOC.lng);
+  const statusMap = { placed:'pending', offered:'pending', accepted:'ongoing', picked_up:'ongoing', on_the_way:'ongoing', delivered:'delivered', completed:'delivered' };
+  const rawStatus = (o.status || 'placed').toLowerCase();
+  const status = statusMap[rawStatus] || (rawStatus === 'delivered' ? 'delivered' : rawStatus === 'ongoing' ? 'ongoing' : 'pending');
+  const stepMap = { pending:0, ongoing: (rawStatus==='picked_up'||rawStatus==='on_the_way') ? 2 : 1, delivered:3 };
+  return {
+    id: o.orderCode || o._id,
+    _id: o._id,
+    name: (o.user && (o.user.name || o.user.fullName)) || o.customerName || 'Customer',
+    phone: (o.user && o.user.phone) || o.customerPhone || '',
+    area: o.area || o.zone || '',
+    addr,
+    lat, lng,
+    instr: o.deliveryInstructions || o.instr || '',
+    items: (o.items || []).map(it => `${it.name || it.productName || 'Item'} x${it.qty || it.quantity || 1}`),
+    amount: o.total || o.amount || 0,
+    payment: (o.paymentMethod === 'cod' || o.payment === 'COD') ? 'COD' : 'Prepaid',
+    distanceKm: o.distanceKm || 0,
+    eta: o.eta || '—',
+    status,
+    step: stepMap[status] ?? 0,
+    zone: o.zone || o.area || '',
+    proof: o.proof || null
+  };
+}
+
+/* Pulls this partner's current order list from the server and re-renders.
+   Called on boot, after login, and after any accept/reject/status change
+   so the UI always reflects the backend, not local optimistic state. */
+async function loadOrdersFromServer(){
+  try{
+    const res = await Api.listMyOrders();
+    const list = Array.isArray(res) ? res : (res.orders || res.data || []);
+    orders = list.map(mapServerOrder);
+  }catch(e){
+    console.warn('[orders] failed to load from server:', e.message);
+    showToast('Could not load deliveries — check your connection');
+  }
+  renderAll();
+}
 /* Fallback starting point (used only until real GPS lock is acquired) */
 const FALLBACK_RIDER_LOC = { lat:17.4560, lng:78.3690 };
 let riderLoc = null;      // { lat, lng, accuracy, heading, speed, ts } — set only from real GPS
@@ -130,10 +175,26 @@ function setGpsStatusUI(state){
 }
 
 /* Called on every real GPS fix */
+let lastLocationPushTs = 0;
 function onRiderLocationUpdate(){
   setGpsStatusUI('live');
   recalcLiveDistances();
   updateLiveMapIfOpen();
+  pushLocationToServer();
+}
+
+/* Reports this partner's live location to the backend so admin/customer
+   tracking (miLKadmin, milkwebapp) can show it in real time. Throttled to
+   once every ~5s since GPS can fire multiple times a second. */
+function pushLocationToServer(){
+  if(!riderLoc) return;
+  const now = Date.now();
+  if(now - lastLocationPushTs < 5000) return;
+  lastLocationPushTs = now;
+  Api.updateLocation(riderLoc.lat, riderLoc.lng).catch((e)=>{
+    if(handleAuthError(e)) return;
+    console.warn('[location] push failed:', e.message);
+  });
 }
 
 /* =========================================================
@@ -597,9 +658,15 @@ function initSwipe(orderId){
   window.addEventListener('touchend', pointerUp);
 }
 
-function completeDelivery(orderId, proof){
+async function completeDelivery(orderId, proof){
   const o = orders.find(x=>x.id===orderId);
   if(!o) return;
+  try{
+    await Api.updateOrderStatus(o._id || o.id, 'delivered');
+  }catch(e){
+    showToast('Could not mark delivered — ' + e.message);
+    return;
+  }
   o.status = 'delivered';
   o.step = 3;
   o.proof = proof || null;
@@ -958,13 +1025,21 @@ function checkProximity(order){
 }
 
 
-function acceptOrder(orderId){
+async function acceptOrder(orderId){
   const alreadyOngoing = orders.find(o=>o.status==='ongoing');
   if(alreadyOngoing){
     showToast('Finish your current delivery first');
     return;
   }
   const o = orders.find(x=>x.id===orderId);
+  if(!o) return;
+  try{
+    await Api.respondToOrder(o._id || o.id, 'accept');
+  }catch(e){
+    showToast(e.status === 409 ? 'Already taken by another rider' : 'Could not accept — ' + e.message);
+    await loadOrdersFromServer();
+    return;
+  }
   o.status = 'ongoing';
   o.step = 1;
   closeDetail();
@@ -1007,28 +1082,39 @@ document.getElementById('goSwitch').addEventListener('click', function(){
 });
 
 /* =========================================================
-   INCOMING ORDER SIMULATION
+   INCOMING ORDER — real backend broadcast (order:offered), not a
+   simulation. Mirrors milkwebapp/js/delivery-accept.js's flow,
+   adapted to this app's full-screen incoming-order sheet instead
+   of an inline card list.
 ========================================================= */
-let incomingTimer, ringInterval;
-function scheduleIncomingOrder(){
-  clearTimeout(incomingTimer);
-  incomingTimer = setTimeout(()=>{
-    const isOnline = document.getElementById('goSwitch').classList.contains('on');
-    const hasActive = orders.some(o=>o.status==='ongoing');
-    if(isOnline && !hasActive){
-      showIncomingOrder();
-    } else {
-      scheduleIncomingOrder();
+let ringInterval;
+let incomingOrderId = null;
+let incomingSocket = null;
+
+function connectDeliverySocket(){
+  Api.connectSocket({
+    'order:offered': (order)=>{
+      const isOnline = document.getElementById('goSwitch').classList.contains('on');
+      const hasActive = orders.some(o=>o.status==='ongoing');
+      if(!isOnline || hasActive) return; // can't take a new job right now
+      showIncomingOrder(order);
+    },
+    'order:takenByOther': ({ _id })=>{
+      if(incomingOrderId === _id){
+        hideIncomingOrder();
+        showToast('Order taken by another rider');
+      }
     }
-  }, 9000);
+  }, (socket)=>{ incomingSocket = socket; });
 }
-function showIncomingOrder(){
+
+function showIncomingOrder(order){
+  incomingOrderId = order._id;
   const backdrop = document.getElementById('incomingBackdrop');
   const amt = document.getElementById('incomingAmt');
   const sub = document.getElementById('incomingSub');
-  const pending = orders.find(o=>o.status==='pending');
-  amt.textContent = pending ? '₹'+pending.amount : '₹210';
-  sub.textContent = pending ? pending.area + ' · ' + distanceLabel(pending.distanceKm) + ' away' : 'Kondapur · 1.2 km away';
+  amt.textContent = '₹' + (order.total || order.amount || 0);
+  sub.textContent = (order.area || order.zone || 'Nearby') + (order.distanceKm ? ' · ' + distanceLabel(order.distanceKm) + ' away' : '');
   backdrop.classList.add('show');
   navFabPulse(true);
   playChime('incoming');
@@ -1050,7 +1136,6 @@ function showIncomingOrder(){
       clearInterval(ringInterval);
       hideIncomingOrder();
       showToast('Request expired');
-      scheduleIncomingOrder();
     }
   }, 1000);
 }
@@ -1058,24 +1143,30 @@ function hideIncomingOrder(){
   document.getElementById('incomingBackdrop').classList.remove('show');
   navFabPulse(false);
   clearInterval(ringInterval);
+  incomingOrderId = null;
 }
 function navFabPulse(on){
   document.getElementById('navFab').classList.toggle('pulseFab', on);
 }
-document.getElementById('declineBtn').addEventListener('click', ()=>{
+document.getElementById('declineBtn').addEventListener('click', async ()=>{
+  const id = incomingOrderId;
   hideIncomingOrder();
+  if(id){
+    try{ await Api.respondToOrder(id, 'reject'); }catch(e){ /* already resolved either way */ }
+  }
   showToast('Delivery declined');
-  scheduleIncomingOrder();
 });
-document.getElementById('acceptIncomingBtn').addEventListener('click', ()=>{
+document.getElementById('acceptIncomingBtn').addEventListener('click', async ()=>{
+  const id = incomingOrderId;
   hideIncomingOrder();
-  const pending = orders.find(o=>o.status==='pending');
-  if(pending){
-    pending.status = 'ongoing';
-    pending.step = 1;
-    renderAll();
+  if(!id) return;
+  try{
+    await Api.respondToOrder(id, 'accept');
     showToast('New delivery accepted!');
+    await loadOrdersFromServer();
     goToScreen('home');
+  }catch(e){
+    showToast(e.status === 409 ? 'Already taken by another rider' : 'Could not accept — ' + e.message);
   }
 });
 
@@ -1371,178 +1462,163 @@ function openRatingsInfo(){
 }
 
 /* =========================================================
-   AUTH FLOW — splash → login → otp → app
+   AUTH FLOW — splash → login/register → app
+   Wired to the real backend (pakkabackend), same one miLKadmin
+   and milkwebapp use: Api.deliveryLogin / Api.deliveryRegister,
+   JWT stored via Api.setToken (see api.js).
 ========================================================= */
-const DEMO_OTP = '123456';
 function showAuthView(id){
   document.querySelectorAll('.auth-view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-let resendTimer, resendSecs = 30;
-function startResendTimer(){
-  clearInterval(resendTimer);
-  resendSecs = 30;
-  const secsEl = document.getElementById('resendSecs');
-  const textEl = document.getElementById('resendTimerText');
-  const linkEl = document.getElementById('resendLink');
-  textEl.style.display = 'inline';
-  linkEl.classList.add('disabled');
-  secsEl.textContent = resendSecs;
-  resendTimer = setInterval(()=>{
-    resendSecs -= 1;
-    secsEl.textContent = resendSecs;
-    if(resendSecs <= 0){
-      clearInterval(resendTimer);
-      textEl.style.display = 'none';
-      linkEl.classList.remove('disabled');
-    }
-  }, 1000);
-}
+document.getElementById('goToRegisterLink').addEventListener('click', ()=> showAuthView('view-register'));
+document.getElementById('backToLoginLink').addEventListener('click', ()=> showAuthView('view-login'));
 
-function focusFirstOtp(){
-  const first = document.querySelector('#loginOtpRow .otp-box');
-  if(first) setTimeout(()=> first.focus(), 350);
-}
+document.getElementById('loginBtn').addEventListener('click', ()=> attemptLogin());
+document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') attemptLogin();
+});
 
-document.getElementById('sendOtpBtn').addEventListener('click', ()=>{
+async function attemptLogin(){
   const phoneInput = document.getElementById('loginPhone');
+  const passInput = document.getElementById('loginPassword');
   const digits = phoneInput.value.replace(/\D/g,'');
+  const password = passInput.value;
   if(digits.length !== 10){
     phoneInput.parentElement.classList.add('shake');
     setTimeout(()=> phoneInput.parentElement.classList.remove('shake'), 400);
     showToast('Enter a valid 10-digit mobile number');
     return;
   }
-  document.getElementById('otpPhoneShown').textContent = '+91 ' + digits.slice(0,5) + ' ' + digits.slice(5);
-  showAuthView('view-otp');
-  startResendTimer();
-  focusFirstOtp();
-  showToast('OTP sent via SMS');
-});
-
-document.getElementById('resendLink').addEventListener('click', function(){
-  if(this.classList.contains('disabled')) return;
-  startResendTimer();
-  showToast('OTP resent');
-});
-
-document.getElementById('changeNumLink').addEventListener('click', ()=>{
-  clearInterval(resendTimer);
-  showAuthView('view-login');
-});
-
-document.getElementById('verifyOtpBtn').addEventListener('click', ()=> attemptVerifyOtp());
-
-/* OTP auto-advance for the LOGIN otp row specifically (separate from delivery OTP) */
-document.getElementById('loginOtpRow').addEventListener('input', (e)=>{
-  if(!e.target.classList.contains('otp-box')) return;
-  e.target.value = e.target.value.replace(/\D/g,'');
-  if(e.target.value.length===1){
-    const next = e.target.nextElementSibling;
-    if(next && next.classList.contains('otp-box')) next.focus();
-    const boxes = document.querySelectorAll('#loginOtpRow .otp-box');
-    if([...boxes].length===6 && [...boxes].every(b=>b.value.length===1)) attemptVerifyOtp();
-  }
-});
-document.getElementById('loginOtpRow').addEventListener('keydown', (e)=>{
-  if(e.key === 'Backspace' && e.target.value === ''){
-    const prev = e.target.previousElementSibling;
-    if(prev && prev.classList.contains('otp-box')) prev.focus();
-  }
-});
-
-function attemptVerifyOtp(){
-  const boxes = [...document.querySelectorAll('#loginOtpRow .otp-box')];
-  const code = boxes.map(b=>b.value).join('');
-  if(code.length !== 6){
-    showToast('Enter the 6-digit OTP');
+  if(!password){
+    showToast('Enter your password');
     return;
   }
-  const btn = document.getElementById('verifyOtpBtn');
-  btn.textContent = 'Verifying…';
+  const btn = document.getElementById('loginBtn');
+  const original = btn.innerHTML;
+  btn.textContent = 'Logging in…';
   btn.disabled = true;
-  setTimeout(()=>{
-    btn.textContent = 'Verify & Continue';
+  try{
+    const res = await Api.deliveryLogin(digits, password);
+    Api.setToken(res.token);
+    await completeLogin(false, res.user);
+  }catch(e){
+    showToast(e.message || 'Login failed');
+  }finally{
+    btn.innerHTML = original;
     btn.disabled = false;
-    if(code !== DEMO_OTP){
-      const row = document.getElementById('loginOtpRow');
-      row.classList.add('shake');
-      setTimeout(()=> row.classList.remove('shake'), 400);
-      boxes.forEach(b=> b.value = '');
-      boxes[0].focus();
-      showToast('Incorrect OTP — try 123456');
-      return;
-    }
-    completeLogin();
-  }, 700);
+  }
 }
 
-function completeLogin(isAutoLogin){
-  try{ localStorage.setItem('pd_partner_logged_in', '1'); }catch(e){}
-  clearInterval(resendTimer);
+document.getElementById('registerBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('regName').value.trim();
+  const digits = document.getElementById('regPhone').value.replace(/\D/g,'');
+  const password = document.getElementById('regPassword').value;
+  if(!name){ showToast('Enter your name'); return; }
+  if(digits.length !== 10){ showToast('Enter a valid 10-digit mobile number'); return; }
+  if(!password || password.length < 4){ showToast('Choose a password (min 4 characters)'); return; }
+  const btn = document.getElementById('registerBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Creating account…';
+  btn.disabled = true;
+  try{
+    const res = await Api.deliveryRegister({ name, phone: digits, password });
+    if(res && res.token){
+      Api.setToken(res.token);
+      await completeLogin(false, res.user);
+    } else {
+      showToast('Account created — please log in');
+      showAuthView('view-login');
+      document.getElementById('loginPhone').value = digits;
+    }
+  }catch(e){
+    showToast(e.message || 'Registration failed');
+  }finally{
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+});
+
+async function completeLogin(isAutoLogin, user){
   document.getElementById('authOverlay').style.transition = isAutoLogin ? 'none' : 'opacity .35s ease';
   document.getElementById('authOverlay').style.opacity = '0';
   const delay = isAutoLogin ? 0 : 350;
-  setTimeout(()=>{
+  setTimeout(async ()=>{
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('app').classList.add('reveal');
-    bootApp();
-    if(!isAutoLogin) showToast('Welcome back, Ravi! 👋');
+    await bootApp();
+    if(!isAutoLogin) showToast('Welcome' + (user && user.name ? ', ' + user.name.split(' ')[0] : '') + '! 👋');
   }, delay);
 }
 
 /* =========================================================
    SESSION PERSISTENCE CONTRACT
-   The partner stays logged in indefinitely (localStorage flag),
-   surviving browser/app restarts, until EITHER:
+   The partner stays logged in as long as their JWT (stored via
+   Api.setToken, see api.js) is present and valid, surviving
+   browser/app restarts, until EITHER:
      1. They tap "Log Out" themselves (logoutUser() below), or
-     2. The backend/admin force-revokes the session — call
-        forceLogoutByAdmin(reason) below when wiring a real API
-        (e.g. after a 401 from the server, or a push signal that
-        an admin deactivated this partner's account).
-   Nothing else in this file clears the session automatically.
+     2. The backend rejects a request with 401 (session revoked
+        by the backend/admin) — handleAuthError() below calls
+        forceLogoutByAdmin() in that case.
 ========================================================= */
 function forceLogoutByAdmin(reason){
   logoutUser();
   showToast(reason || 'Your account access was removed by admin');
 }
 
+/* Call this from any Api.* catch block when err.status === 401 to react
+   to a revoked/expired session consistently across the app. */
+function handleAuthError(err){
+  if(err && err.status === 401){
+    forceLogoutByAdmin('Your session expired — please log in again');
+    return true;
+  }
+  return false;
+}
+
 function logoutUser(){
-  try{ localStorage.removeItem('pd_partner_logged_in'); }catch(e){}
+  Api.setToken(null);
+  appBooted = false;
   closeDetail();
-  clearTimeout(incomingTimer);
   hideIncomingOrder();
   stopLiveTracking();
+  if(incomingSocket){ incomingSocket.disconnect(); incomingSocket = null; }
   document.getElementById('app').classList.remove('reveal');
   const overlay = document.getElementById('authOverlay');
   overlay.style.display = 'flex';
   overlay.style.opacity = '1';
   document.getElementById('loginPhone').value = '';
-  document.querySelectorAll('#loginOtpRow .otp-box').forEach(b=> b.value = '');
+  document.getElementById('loginPassword').value = '';
   showAuthView('view-login');
   showToast('Logged out');
 }
 
 let appBooted = false;
-function bootApp(){
+async function bootApp(){
   if(appBooted) return;
   appBooted = true;
-  renderAll();
-  scheduleIncomingOrder();
+  await loadOrdersFromServer();
+  connectDeliverySocket();
   autoResumeTrackingIfGranted();
 }
 
-/* Boot sequence: check remembered login FIRST (before any splash/login
-   view can flash on screen). Only truly logged-out users see splash→login. */
+/* Boot sequence: check for a stored token FIRST (before any splash/login
+   view can flash on screen). Only truly logged-out users see splash→login.
+   The token's validity is confirmed by Api.me() — a real profile fetch,
+   not just "a token exists in storage". */
 (function boot(){
-  let remembered = false;
-  try{ remembered = localStorage.getItem('pd_partner_logged_in') === '1'; }catch(e){}
+  const hasToken = !!Api.getToken();
 
-  if(remembered){
-    // Silent auto-login: brief splash for smoothness, then straight into
-    // the app — never touches or shows the login/OTP screens.
-    setTimeout(()=> completeLogin(true), 700);
+  if(hasToken){
+    // Verify the token still works before silently entering the app -
+    // an expired/revoked token should drop back to login, not a broken UI.
+    Api.me()
+      .then((user)=> completeLogin(true, user))
+      .catch(()=>{
+        Api.setToken(null);
+        setTimeout(()=> showAuthView('view-login'), 800);
+      });
   } else {
     setTimeout(()=> showAuthView('view-login'), 1600);
   }
