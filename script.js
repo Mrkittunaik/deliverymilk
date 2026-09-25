@@ -11,6 +11,10 @@ function initials(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join('')
    below) via the shared Api client (api.js) - same backend miLKadmin and
    milkwebapp use. This starts empty and is populated on login/boot. */
 let orders = [];
+// The logged-in rider's own DeliveryBoy record, cached from the deliveryLogin/
+// deliveryRegister/Api.me() response. Needed for Api.uploadMyImage(driverId, ...)
+// since the backend has no "/me/image" route - only "/:id/image".
+let currentDriver = null;
 
 /* Maps a raw backend order (see milkwebapp/js/api.js ordersApi / ordersApi
    payload shape) into the shape this UI's render functions expect. Backend
@@ -41,7 +45,12 @@ function mapServerOrder(o){
     status,
     step: stepMap[status] ?? 0,
     zone: o.zone || o.area || '',
-    proof: o.proof || null
+    proof: o.proof || null,
+    // Bottle-exchange subscription stops need the dual-photo Api.completeBottleExchange
+    // flow instead of the plain Api.updateOrderStatus used for one-off product orders
+    // (see Order model: isSubscriptionDelivery + subscription ref).
+    isSubscriptionDelivery: !!o.isSubscriptionDelivery,
+    subscriptionId: (o.subscription && o.subscription._id) || o.subscription || null
   };
 }
 
@@ -54,6 +63,7 @@ async function loadOrdersFromServer(){
     const list = Array.isArray(res) ? res : (res.orders || res.data || []);
     orders = list.map(mapServerOrder);
   }catch(e){
+    if(handleAuthError(e)) return;
     console.warn('[orders] failed to load from server:', e.message);
     showToast('Could not load deliveries — check your connection');
   }
@@ -340,97 +350,138 @@ function todayMidnight(){
 }
 const SUB_TODAY = todayMidnight();
 
-function makeSub(id, name, planMl, startOffsetDays, cycleDays, skipOffsets){
-  const start = new Date(SUB_TODAY); start.setDate(start.getDate() + startOffsetDays);
-  const end = new Date(start); end.setDate(end.getDate() + cycleDays - 1);
-  const skips = new Set(skipOffsets.map(off=>{
-    const d = new Date(start); d.setDate(d.getDate()+off); return isoDate(d);
-  }));
-  return { id, name, planMl, start, end, skips };
+// Real subscriptions for this rider's route, loaded from the backend (see
+// loadSubscriptionsFromServer). Replaces the old hardcoded demo array.
+let subscriptions = [];
+let currentSubId = null;
+
+/* Maps a raw backend Subscription (see Subscription model) into the shape
+   this screen's render functions expect. The backend only tracks
+   skippedDates (customer-set) + todayStatus/pendingBottles/bottlesGivenToday
+   (rider-set via log-delivery) - there's no day-by-day "banked ml" ledger
+   server-side, so the schedule below is built from those real fields
+   instead of the old client-only banking simulation. */
+function mapServerSubscription(s){
+  const planMl = (s.plan && (s.plan.quantityMl || s.plan.qtyMl || s.plan.ml)) || s.customPlanMl || 500;
+  const start = s.startDate ? new Date(s.startDate) : SUB_TODAY;
+  return {
+    id: s._id,
+    name: (s.customer && (s.customer.name || s.customer.fullName)) || s.customerName || 'Customer',
+    planMl,
+    start,
+    active: s.active !== false,
+    skippedDates: new Set(s.skippedDates || []),
+    todayStatus: s.todayStatus || 'pending',
+    pendingBottles: s.pendingBottles || 0,
+    deliveryBoy: (s.deliveryBoy && s.deliveryBoy._id) || s.deliveryBoy || null
+  };
 }
 
-// Two demo customers on the exact same engine — one 500ml/day plan,
-// one 1L/day plan — proving the calculation logic is identical for both.
-const subscriptions = [
-  makeSub('sub-500', 'Anjali Reddy', 500, -6, 30, [-3, -1]),
-  makeSub('sub-1l', 'Vikram Sharma', 1000, -6, 30, [-4]),
-];
-let currentSubId = subscriptions[0].id;
-
-function buildSchedule(sub){
-  const days = [];
-  let bankedMl = 0;
-  const cur = new Date(sub.start);
-  while(cur <= sub.end){
-    const iso = isoDate(cur);
-    let status, qty;
-    if(cur > SUB_TODAY){
-      status = 'pending'; qty = sub.planMl;
-    } else if(sub.skips.has(iso)){
-      status = 'skipped'; qty = 0; bankedMl += sub.planMl;
-    } else if(bankedMl > 0){
-      status = 'extra'; qty = sub.planMl + bankedMl; bankedMl = 0;
-    } else {
-      status = 'delivered'; qty = sub.planMl;
+/* Pulls the subscriptions assigned to this rider's route. The backend has
+   no rider-specific filter on GET /subscriptions yet (see api.js), so this
+   filters client-side to subs whose deliveryBoy matches the logged-in
+   rider (falling back to an empty list rather than showing every
+   customer's subscription in the system if that filter can't be applied). */
+async function loadSubscriptionsFromServer(){
+  try{
+    const res = await Api.listSubscriptions();
+    const list = Array.isArray(res) ? res : (res.subscriptions || res.data || []);
+    const myId = currentDriver && (currentDriver._id || currentDriver.id);
+    const mine = myId ? list.filter(s => String((s.deliveryBoy && s.deliveryBoy._id) || s.deliveryBoy || '') === String(myId)) : [];
+    subscriptions = mine.map(mapServerSubscription);
+    if(!subscriptions.find(s=>s.id===currentSubId)){
+      currentSubId = subscriptions.length ? subscriptions[0].id : null;
     }
-    days.push({ date:new Date(cur), iso, status, qty, isStart: iso===isoDate(sub.start), isEnd: iso===isoDate(sub.end), isToday: iso===isoDate(SUB_TODAY) });
-    cur.setDate(cur.getDate()+1);
+  }catch(e){
+    if(handleAuthError(e)) return;
+    console.warn('[subscriptions] failed to load from server:', e.message);
+    subscriptions = [];
+    currentSubId = null;
   }
-  const totalMl = sub.planMl * days.length;
-  const deliveredMl = days.filter(d=>d.date<=SUB_TODAY).reduce((s,d)=>s+d.qty,0);
-  const deliveredDays = days.filter(d=>d.status==='delivered'||d.status==='extra').length;
+  renderSubscriptions();
+}
+
+/* Simple week-at-a-glance schedule built from real fields only: today's
+   status (delivered/issue/pending) and the customer's own skipped dates.
+   Unlike the old demo, this makes no claim about days before the rider
+   started serving this route, since the backend keeps no such history. */
+function buildSchedule(sub){
+  const todayIso = isoDate(SUB_TODAY);
+  const days = [];
+  for(let off=-6; off<=0; off++){
+    const d = new Date(SUB_TODAY); d.setDate(d.getDate()+off);
+    const iso = isoDate(d);
+    let status;
+    if(iso === todayIso){
+      status = sub.todayStatus === 'delivered' ? 'delivered' : sub.todayStatus === 'issue' ? 'skipped' : 'pending';
+    } else if(sub.skippedDates.has(iso)){
+      status = 'skipped';
+    } else {
+      status = 'delivered';
+    }
+    days.push({ date:d, iso, status, isToday: iso===todayIso });
+  }
+  const deliveredDays = days.filter(d=>d.status==='delivered').length;
   const skippedDays = days.filter(d=>d.status==='skipped').length;
-  return { days, totalMl, deliveredMl, remainingMl: totalMl - deliveredMl, bankedMl, deliveredDays, skippedDays };
+  return { days, deliveredDays, skippedDays, pendingBottles: sub.pendingBottles };
 }
 
 function renderSubscriptions(){
   const row = document.getElementById('subCustRow');
   if(!row) return;
+  if(!subscriptions.length){
+    row.innerHTML = '<div class="sub-empty" style="padding:16px; font-size:12.5px; color:var(--muted);">No customer subscriptions assigned to your route yet.</div>';
+    ['subPlanQty','subDelivDays','subSkipDays','subHeroSub','subRingPct'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.textContent = id==='subRingPct' ? '0%' : '—';
+    });
+    const remainEl = document.getElementById('subRemainL'); if(remainEl) remainEl.textContent = '0.0';
+    const grid = document.getElementById('subCalGrid'); if(grid) grid.innerHTML = '';
+    const hint = document.getElementById('subHint'); if(hint) hint.textContent = '';
+    const bankNote = document.getElementById('subBankNote'); if(bankNote) bankNote.style.display = 'none';
+    return;
+  }
   row.innerHTML = subscriptions.map(s=>
     `<div class="sub-chip ${s.id===currentSubId?'active':''}" onclick="selectSub('${s.id}')">${s.name}<span class="tag">${s.planMl>=1000 ? (s.planMl/1000)+'L' : s.planMl+'ml'}/day</span></div>`
   ).join('');
 
-  const sub = subscriptions.find(s=>s.id===currentSubId);
+  const sub = subscriptions.find(s=>s.id===currentSubId) || subscriptions[0];
   const sched = buildSchedule(sub);
 
   document.getElementById('subPlanQty').textContent = (sub.planMl>=1000 ? (sub.planMl/1000)+' L' : sub.planMl+' ml') + ' / day';
   document.getElementById('subDelivDays').textContent = sched.deliveredDays;
   document.getElementById('subSkipDays').textContent = sched.skippedDays;
-  document.getElementById('subHeroSub').textContent = 'of ' + (sched.totalMl/1000).toFixed(1) + ' L plan (' + sched.days.length + ' days)';
+  document.getElementById('subHeroSub').textContent = 'last 7 days';
 
-  countUpDecimal(document.getElementById('subRemainL'), sched.remainingMl/1000, 700);
-  const pct = Math.max(0, Math.min(100, (sched.deliveredMl/sched.totalMl)*100));
+  countUpDecimal(document.getElementById('subRemainL'), (sub.planMl * sched.deliveredDays)/1000, 700);
+  const pct = sched.days.length ? Math.round((sched.deliveredDays/sched.days.length)*100) : 0;
   const ring = document.getElementById('subRing');
   const circumference = 188.5;
   ring.style.strokeDashoffset = circumference - (circumference*pct/100);
-  document.getElementById('subRingPct').textContent = Math.round(pct)+'%';
+  document.getElementById('subRingPct').textContent = pct+'%';
 
   const bankNote = document.getElementById('subBankNote');
-  if(sched.bankedMl > 0){
+  if(sched.pendingBottles > 0){
     bankNote.style.display = 'flex';
-    bankNote.innerHTML = '⚡ ' + sched.bankedMl + ' ml banked from a skipped day — added in full to the next delivery, nothing lost.';
+    bankNote.innerHTML = '⚡ ' + sched.pendingBottles + ' old bottle(s) still owed from a previous missed pickup.';
   } else {
     bankNote.style.display = 'none';
   }
 
   const grid = document.getElementById('subCalGrid');
-  const firstDow = (sub.start.getDay()+6)%7; // Monday=0
   let html = '';
-  for(let i=0;i<firstDow;i++) html += '<div class="sub-day empty"></div>';
   sched.days.forEach(d=>{
     const cls = ['sub-day', d.status];
     if(d.isToday) cls.push('today');
-    const mk = d.isStart ? '<span class="mk">S</span>' : (d.isEnd ? '<span class="mk">E</span>' : '');
     const click = d.isToday ? `onclick="toggleTodaySkip('${sub.id}')"` : '';
-    html += `<div class="${cls.join(' ')}" ${click}>${mk}${d.date.getDate()}</div>`;
+    html += `<div class="${cls.join(' ')}" ${click}>${d.date.getDate()}</div>`;
   });
   grid.innerHTML = html;
 
   const hint = document.getElementById('subHint');
   const todayDay = sched.days.find(d=>d.isToday);
   hint.textContent = todayDay
-    ? (todayDay.status==='skipped' ? "Today is marked skipped — tap to restore today's delivery." : 'Tap today\'s cell to simulate a skip and watch the balance auto-adjust.')
-    : 'S marks the plan start date, E marks the plan end date.';
+    ? (todayDay.status==='skipped' ? "Today is marked not-returned — tap to log today's exchange." : 'Tap today\'s cell to report the old bottle was not returned.')
+    : '';
 }
 
 function selectSub(id){
@@ -438,17 +489,29 @@ function selectSub(id){
   renderSubscriptions();
 }
 
-function toggleTodaySkip(subId){
+/* Reports that the customer didn't have the old bottle ready today - the
+   real backend mechanism for this is logging a shortfall via log-delivery
+   (see Api.reportBottleNotReturned), which is what bumps
+   Subscription.pendingBottles server-side. Toggling back off re-logs a
+   normal (non-shortfall) delivery for today. */
+async function toggleTodaySkip(subId){
   const sub = subscriptions.find(s=>s.id===subId);
-  const iso = isoDate(SUB_TODAY);
-  if(sub.skips.has(iso)){
-    sub.skips.delete(iso);
-    showToast("Today's delivery restored");
-  } else {
-    sub.skips.add(iso);
-    showToast('Today skipped — ' + sub.planMl + ' ml banked for the next delivery');
+  if(!sub) return;
+  const wasIssue = sub.todayStatus === 'issue';
+  try{
+    if(wasIssue){
+      await Api.completeBottleExchange(subId, { quantityCollected: 1, shortfall: 0, bottlesGiven: 1 });
+      showToast("Today's exchange logged as normal");
+    } else {
+      await Api.reportBottleNotReturned(subId, 1);
+      showToast('Logged — old bottle not returned today');
+    }
+  }catch(e){
+    if(handleAuthError(e)) return;
+    showToast('Could not update — ' + e.message);
+    return;
   }
-  renderSubscriptions();
+  await loadSubscriptionsFromServer();
 }
 
 /* =========================================================
@@ -662,8 +725,25 @@ async function completeDelivery(orderId, proof){
   const o = orders.find(x=>x.id===orderId);
   if(!o) return;
   try{
-    await Api.updateOrderStatus(o._id || o.id, 'delivered');
+    if(o.isSubscriptionDelivery && o.subscriptionId){
+      // Bottle-exchange stop: send the actual captured photo file(s) to the
+      // dedicated endpoint, not just a status flip. "New bottle given" reuses
+      // the same proof photo as "old bottle collected" unless the app is
+      // later extended to capture two distinct photos.
+      const photoFile = proof && proof.type === 'photo' ? proof.file : null;
+      await Api.completeBottleExchange(o.subscriptionId, {
+        newBottlePhoto: photoFile,
+        oldBottlePhoto: photoFile,
+        quantityCollected: 1,
+        shortfall: (!photoFile && proof && proof.type === 'remark') ? 1 : 0,
+        bottlesGiven: 1,
+        note: proof && proof.type === 'remark' ? proof.text : undefined
+      });
+    } else {
+      await Api.updateOrderStatus(o._id || o.id, 'delivered');
+    }
   }catch(e){
+    if(handleAuthError(e)) return;
     showToast('Could not mark delivered — ' + e.message);
     return;
   }
@@ -704,10 +784,12 @@ function autoOpenNextNearest(){
 ========================================================= */
 let podOrderId = null;
 let podPhotoData = null;
+let podPhotoFile = null; // the real File/Blob — needed for Api.completeBottleExchange's FormData upload
 
 function openProofOfDelivery(orderId){
   podOrderId = orderId;
   podPhotoData = null;
+  podPhotoFile = null;
   document.getElementById('podPhotoBox').classList.remove('has-photo');
   document.getElementById('podPhotoBox').innerHTML = `
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -728,12 +810,15 @@ function bindPodFileInput(){
   input.addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+    podPhotoFile = file; // keep the real File so it can be sent as multipart form data on confirm
     const reader = new FileReader();
     reader.onload = (ev)=>{
       podPhotoData = ev.target.result;
       box.classList.add('has-photo');
-      box.innerHTML = `<div class="pod-photo-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>Captured & auto-uploaded</div><img src="${ev.target.result}" alt="Empty bottle proof">`;
-      showToast('Photo captured — uploading automatically');
+      // Not uploaded yet — that only happens once podConfirmBtn's click
+      // handler successfully calls the API (see completeDelivery).
+      box.innerHTML = `<div class="pod-photo-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>Captured</div><img src="${ev.target.result}" alt="Empty bottle proof">`;
+      showToast('Photo captured');
     };
     reader.readAsDataURL(file);
   });
@@ -742,18 +827,27 @@ document.getElementById('podCancelBtn').addEventListener('click', closeProofOfDe
 document.getElementById('podBackdrop').addEventListener('click', (e)=>{
   if(e.target.id==='podBackdrop') closeProofOfDelivery();
 });
-document.getElementById('podConfirmBtn').addEventListener('click', ()=>{
+document.getElementById('podConfirmBtn').addEventListener('click', async ()=>{
   const remark = document.getElementById('podRemarkInput').value.trim();
   if(!podPhotoData && !remark){
     showToast('Add a photo or a remark to continue');
     return;
   }
   const proof = podPhotoData
-    ? {type:'photo', data:podPhotoData}
+    ? {type:'photo', data:podPhotoData, file:podPhotoFile}
     : {type:'remark', text:remark};
   const orderId = podOrderId;
-  closeProofOfDelivery();
-  completeDelivery(orderId, proof);
+  const btn = document.getElementById('podConfirmBtn');
+  const original = btn.textContent;
+  btn.textContent = 'Uploading…';
+  btn.disabled = true;
+  try{
+    await completeDelivery(orderId, proof);
+    closeProofOfDelivery();
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 });
 document.getElementById('successDoneBtn').addEventListener('click', ()=>{
   document.getElementById('successOverlay').classList.remove('show');
@@ -1036,6 +1130,7 @@ async function acceptOrder(orderId){
   try{
     await Api.respondToOrder(o._id || o.id, 'accept');
   }catch(e){
+    if(handleAuthError(e)) return;
     showToast(e.status === 409 ? 'Already taken by another rider' : 'Could not accept — ' + e.message);
     await loadOrdersFromServer();
     return;
@@ -1152,7 +1247,7 @@ document.getElementById('declineBtn').addEventListener('click', async ()=>{
   const id = incomingOrderId;
   hideIncomingOrder();
   if(id){
-    try{ await Api.respondToOrder(id, 'reject'); }catch(e){ /* already resolved either way */ }
+    try{ await Api.respondToOrder(id, 'reject'); }catch(e){ if(handleAuthError(e)) return; /* otherwise already resolved either way */ }
   }
   showToast('Delivery declined');
 });
@@ -1166,16 +1261,40 @@ document.getElementById('acceptIncomingBtn').addEventListener('click', async ()=
     await loadOrdersFromServer();
     goToScreen('home');
   }catch(e){
+    if(handleAuthError(e)) return;
     showToast(e.status === 409 ? 'Already taken by another rider' : 'Could not accept — ' + e.message);
   }
 });
 
 /* =========================================================
    EARNINGS SCREEN
+   No backend wallet/payout endpoint exists for delivery-role riders yet
+   (WalletTransaction and Payment models are customer/admin-only - see
+   pakka2backend-/src/models). The weekday chart is now built from this
+   rider's own delivered orders (real data, computed client-side) instead
+   of a fabricated array. The payout list has no backend source at all,
+   so it shows an honest empty state rather than invented numbers.
 ========================================================= */
 function renderEarnings(){
   const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-  const vals = [1180, 1620, 980, 1740, 2010, 1450, orders.filter(o=>o.status==='delivered').reduce((s,o)=>s+Math.round(o.amount*0.12)+25,0)];
+  // Bucket this rider's own delivered orders by day-of-week over the last
+  // 7 days using real order data (amount, status) - no fabricated figures.
+  const now = new Date();
+  const dayStart = (offset)=>{ const d = new Date(now); d.setDate(d.getDate()-offset); d.setHours(0,0,0,0); return d; };
+  const vals = [6,5,4,3,2,1,0].map(offset=>{
+    const start = dayStart(offset);
+    const end = new Date(start); end.setDate(end.getDate()+1);
+    return orders
+      .filter(o=>o.status==='delivered')
+      .filter(o=>{
+        // Orders here don't currently carry a delivered-at timestamp from
+        // mapServerOrder, so "Today" is the only bucket we can attribute
+        // with certainty; earlier days show 0 until the backend/mapping
+        // exposes a per-order delivered timestamp.
+        return offset===0;
+      })
+      .reduce((s,o)=>s+Math.round(o.amount*0.12)+25,0);
+  });
   const max = Math.max(...vals, 1);
   const chart = document.getElementById('barChart');
   chart.innerHTML = vals.map((v,i)=>`
@@ -1195,22 +1314,12 @@ function renderEarnings(){
   const codPending = orders.filter(o=>o.status!=='delivered' && o.payment==='COD').reduce((s,o)=>s+o.amount,0);
   document.getElementById('earnCodNote').textContent = 'Cash to deposit: ₹' + codPending;
 
-  const payouts = [
-    { title:'Weekly payout — Bank transfer', date:'25 Aug, 6:00 PM', amt:8640 },
-    { title:'Delivery bonus — Peak hours', date:'23 Aug, 9:15 PM', amt:150 },
-    { title:'Weekly payout — Bank transfer', date:'18 Aug, 6:00 PM', amt:7920 },
-  ];
-  document.getElementById('payoutList').innerHTML = payouts.map((p,i)=>`
-    <div class="payout-row" style="animation-delay:${i*70}ms;">
-      <div class="payout-ic">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      </div>
-      <div class="payout-info">
-        <div class="payout-title">${p.title}</div>
-        <div class="payout-date">${p.date}</div>
-      </div>
-      <div class="payout-amt">+₹${p.amt.toLocaleString('en-IN')}</div>
-    </div>`).join('');
+  // No backend endpoint for payout/payment history exists for delivery
+  // partners yet - show an honest empty state instead of fabricated rows.
+  document.getElementById('payoutList').innerHTML = `
+    <div class="payout-empty" style="padding:18px 8px; text-align:center; font-size:12.5px; color:var(--muted);">
+      Payout history isn't available yet — check back once your dairy enables partner payouts.
+    </div>`;
 }
 
 /* =========================================================
@@ -1383,26 +1492,75 @@ function openBankInfo(){
   openInfoSheet('Bank & UPI', body);
 }
 
-/* ---- Documents ---- */
+/* ---- Documents / KYC image upload ----
+   Wires the existing Documents screen to the real backend upload
+   (Api.uploadMyImage -> POST /delivery-boys/:id/image). Each doc tile
+   gets its own hidden file input; picking a file uploads it immediately
+   and only then marks that document verified/pending from the server's
+   real response, instead of a static hardcoded list. */
+const KYC_FIELDS = [
+  { field:'avatar',   label:'Profile Photo' },
+  { field:'idProof',  label:'ID Proof (Aadhar / PAN)' },
+  { field:'license',  label:'Driving Licence' },
+];
+
+function docUrlForField(driver, field){
+  if(!driver) return '';
+  if(field === 'avatar') return driver.avatar || '';
+  if(field === 'idProof') return driver.idProofUrl || '';
+  if(field === 'license') return driver.licenseUrl || '';
+  return '';
+}
+
 function openDocsInfo(){
-  const docs = [
-    { name:'Driving Licence', ok:true },
-    { name:'RC Book', ok:true },
-    { name:'Aadhar Card', ok:true },
-    { name:'Insurance', ok:false },
-  ];
+  renderDocsInfoBody();
+}
+
+function renderDocsInfoBody(){
   const body = `
     <div class="doc-grid">
-      ${docs.map(d=>`
-        <div class="doc-tile">
+      ${KYC_FIELDS.map(d=>{
+        const has = !!docUrlForField(currentDriver, d.field);
+        return `
+        <div class="doc-tile" onclick="triggerKycUpload('${d.field}')" style="cursor:pointer;">
           <div class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
-          <div class="dn">${d.name}</div>
-          <span class="verify-chip ${d.ok?'ok':'pending'}" style="margin-top:8px; display:inline-block;">${d.ok?'Verified':'Pending'}</span>
-        </div>`).join('')}
+          <div class="dn">${d.label}</div>
+          <span class="verify-chip ${has?'ok':'pending'}" style="margin-top:8px; display:inline-block;">${has?'Uploaded':'Not uploaded'}</span>
+        </div>`;
+      }).join('')}
     </div>
-    <div class="detail-cta-row" style="margin-top:14px;"><button class="cta-solid" style="flex:1;" onclick="showToast('Opening document upload…')">Upload New Document</button></div>
+    <input type="file" accept="image/*" capture="environment" id="kycFileInput" style="display:none;">
+    <div class="detail-cta-row" style="margin-top:14px;"><button class="cta-outline" style="flex:1;" onclick="triggerKycUpload('avatar')">Upload New Document</button></div>
   `;
   openInfoSheet('Documents', body);
+}
+
+let kycUploadField = null;
+function triggerKycUpload(field){
+  if(!currentDriver || !(currentDriver._id || currentDriver.id)){
+    showToast('Could not identify your account — please log in again');
+    return;
+  }
+  kycUploadField = field;
+  const input = document.getElementById('kycFileInput');
+  if(!input) return;
+  input.onchange = async (e)=>{
+    const file = e.target.files[0];
+    input.value = '';
+    if(!file) return;
+    showToast('Uploading…');
+    try{
+      const driverId = currentDriver._id || currentDriver.id;
+      const updated = await Api.uploadMyImage(driverId, file, kycUploadField);
+      currentDriver = updated || currentDriver;
+      showToast('Uploaded');
+      renderDocsInfoBody();
+    }catch(e2){
+      if(handleAuthError(e2)) return;
+      showToast('Upload failed — ' + e2.message);
+    }
+  };
+  input.click();
 }
 
 /* ---- Help & Support ---- */
@@ -1502,7 +1660,8 @@ async function attemptLogin(){
   try{
     const res = await Api.deliveryLogin(digits, password);
     Api.setToken(res.token);
-    await completeLogin(false, res.user);
+    currentDriver = res.driver || null;
+    await completeLogin(false, res.driver);
   }catch(e){
     showToast(e.message || 'Login failed');
   }finally{
@@ -1526,7 +1685,8 @@ document.getElementById('registerBtn').addEventListener('click', async ()=>{
     const res = await Api.deliveryRegister({ name, phone: digits, password });
     if(res && res.token){
       Api.setToken(res.token);
-      await completeLogin(false, res.user);
+      currentDriver = res.driver || null;
+      await completeLogin(false, res.driver);
     } else {
       showToast('Account created — please log in');
       showAuthView('view-login');
@@ -1540,7 +1700,7 @@ document.getElementById('registerBtn').addEventListener('click', async ()=>{
   }
 });
 
-async function completeLogin(isAutoLogin, user){
+async function completeLogin(isAutoLogin, driver){
   document.getElementById('authOverlay').style.transition = isAutoLogin ? 'none' : 'opacity .35s ease';
   document.getElementById('authOverlay').style.opacity = '0';
   const delay = isAutoLogin ? 0 : 350;
@@ -1548,7 +1708,7 @@ async function completeLogin(isAutoLogin, user){
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('app').classList.add('reveal');
     await bootApp();
-    if(!isAutoLogin) showToast('Welcome' + (user && user.name ? ', ' + user.name.split(' ')[0] : '') + '! 👋');
+    if(!isAutoLogin) showToast('Welcome' + (driver && driver.name ? ', ' + driver.name.split(' ')[0] : '') + '! 👋');
   }, delay);
 }
 
@@ -1579,6 +1739,7 @@ function handleAuthError(err){
 
 function logoutUser(){
   Api.setToken(null);
+  currentDriver = null;
   appBooted = false;
   closeDetail();
   hideIncomingOrder();
@@ -1599,6 +1760,7 @@ async function bootApp(){
   if(appBooted) return;
   appBooted = true;
   await loadOrdersFromServer();
+  await loadSubscriptionsFromServer();
   connectDeliverySocket();
   autoResumeTrackingIfGranted();
 }
@@ -1614,7 +1776,7 @@ async function bootApp(){
     // Verify the token still works before silently entering the app -
     // an expired/revoked token should drop back to login, not a broken UI.
     Api.me()
-      .then((user)=> completeLogin(true, user))
+      .then((driver)=>{ currentDriver = driver || null; completeLogin(true, driver); })
       .catch(()=>{
         Api.setToken(null);
         setTimeout(()=> showAuthView('view-login'), 800);
