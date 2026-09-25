@@ -77,11 +77,15 @@
     // ---- self profile ----
     me: () => get('/delivery-boys/me'),
     updateLocation: (lat, lng) => patch('/delivery-boys/me/location', { lat, lng }),
-    uploadMyImage: (file, field) => {
+    // The backend only exposes image upload at /delivery-boys/:id/image
+    // (there's no "/me/image" route) - the caller must pass their own
+    // DeliveryBoy _id, e.g. from a cached Api.me() result. requireRole
+    // allows 'delivery' to hit this on their own id (see deliveryBoyRoutes.js).
+    uploadMyImage: (driverId, file, field) => {
       const form = new FormData();
       form.append('image', file);
       form.append('field', field || 'avatar');
-      return requestForm('/delivery-boys/me/image', form);
+      return requestForm(`/delivery-boys/${driverId}/image`, form);
     },
 
     // ---- orders ----
@@ -94,38 +98,46 @@
     respondToOrder: (id, action) => patch(`/orders/${id}/respond`, { action }), // action: 'accept' | 'reject'
     updateOrderStatus: (id, status) => patch(`/orders/${id}/status`, { status }),
 
-    // ---- subscription bottle-exchange delivery ----
+    // ---- subscriptions (bottle-exchange route) ----
+    // All subscriptions the backend will hand back for this caller. There's
+    // no rider-specific filter on the backend yet (GET /subscriptions only
+    // scopes by customer for role:customer) - callers with role:delivery
+    // get every subscription back and must filter client-side by
+    // sub.deliveryBoy === their own id (see script.js loadSubscriptionsFromServer).
+    listSubscriptions: () => get('/subscriptions'),
     // Completes a subscription stop with dual proof-of-exchange photos
     // (new bottle handed over + old bottle collected) instead of the
-    // single generic proof used for one-off product orders.
+    // single generic proof used for one-off product orders. Matches the
+    // real backend route: POST /subscriptions/:id/log-delivery, multipart
+    // fields newBottlePhoto/oldBottlePhoto, body quantityCollected/
+    // shortfall/bottlesGiven (see subscriptionController.logDelivery).
     completeBottleExchange: (subId, data) => {
       const form = new FormData();
       if (data.newBottlePhoto) form.append('newBottlePhoto', data.newBottlePhoto);
       if (data.oldBottlePhoto) form.append('oldBottlePhoto', data.oldBottlePhoto);
-      form.append('newBottleQty', data.newBottleQty);
-      form.append('oldBottleQtyCollected', data.oldBottleQtyCollected);
-      if (data.note) form.append('note', data.note);
-      return requestForm(`/subscriptions/${subId}/deliver`, form);
+      form.append('quantityCollected', data.quantityCollected);
+      if (data.shortfall !== undefined) form.append('shortfall', data.shortfall);
+      if (data.bottlesGiven !== undefined) form.append('bottlesGiven', data.bottlesGiven);
+      return requestForm(`/subscriptions/${subId}/log-delivery`, form);
     },
-    // Logs that the customer didn't have the old bottle(s) ready today -
-    // backend carries the count forward so tomorrow's stop knows to
-    // collect the extra bottle(s) on top of that day's usual pickup.
-    reportBottleNotReturned: (subId, data) => post(`/subscriptions/${subId}/bottle-not-returned`, data),
+    // Logs that the customer didn't have the old bottle(s) ready today.
+    // The backend has no dedicated "not returned" endpoint - the real
+    // mechanism is log-delivery with a shortfall count, which is what
+    // bumps Subscription.pendingBottles server-side (see logDelivery).
+    reportBottleNotReturned: (subId, shortfallQty) =>
+      Api.completeBottleExchange(subId, { quantityCollected: 0, shortfall: shortfallQty, bottlesGiven: 0 }),
     // Raises a ticket for admin review (broken/damaged bottle claimed by
     // customer). Admin approving it is what actually debits the wallet -
-    // this call only files the claim.
+    // this call only files the claim. Matches the real backend route:
+    // POST /bottle-tickets (role:delivery), multipart field "photo".
     raiseBottleTicket: (subId, data) => {
       const form = new FormData();
       if (data.photo) form.append('photo', data.photo);
+      form.append('subscription', subId);
       form.append('reason', data.reason);
       if (data.note) form.append('note', data.note);
-      return requestForm(`/subscriptions/${subId}/bottle-ticket`, form);
+      return requestForm('/bottle-tickets', form);
     },
-    // Pending-bottle ledger for this rider's route today (how many old
-    // bottles are owed per subscription from previous missed pickups).
-    // Falls back to purely local tracking (pendingBottles.js) if this
-    // endpoint isn't available yet on the backend.
-    getPendingBottles: () => get('/delivery-boys/me/pending-bottles'),
 
     // ---- realtime ----
     // Mirrors miLKadmin/api.js's retry pattern for a slow/cold-starting
