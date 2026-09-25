@@ -1181,8 +1181,17 @@ document.getElementById('goSwitch').addEventListener('click', function(){
    simulation. Mirrors milkwebapp/js/delivery-accept.js's flow,
    adapted to this app's full-screen incoming-order sheet instead
    of an inline card list.
+
+   The old 10s local countdown ring was a fake client-side timer that
+   didn't actually expire or reassign anything on the backend - removed.
+   The real timeout now lives server-side (orderController.js,
+   AUTO_ASSIGN_TIMEOUT_MS): if nobody accepts within ~4s, the backend
+   itself atomically assigns the order to whichever offered rider has
+   the fewest active deliveries right now, so this can never double-
+   assign even if two riders tap Accept at the same instant. Either way
+   - someone else accepting, or the backend auto-assigning - this
+   screen finds out via the same 'order:takenByOther' socket event.
 ========================================================= */
-let ringInterval;
 let incomingOrderId = null;
 let incomingSocket = null;
 
@@ -1213,31 +1222,10 @@ function showIncomingOrder(order){
   backdrop.classList.add('show');
   navFabPulse(true);
   playChime('incoming');
-
-  const ring = document.getElementById('ringFg');
-  const num = document.getElementById('ringNum');
-  let t = 10;
-  const circumference = 251;
-  ring.style.transition = 'none';
-  ring.style.strokeDashoffset = 0;
-  num.textContent = t;
-  clearInterval(ringInterval);
-  ringInterval = setInterval(()=>{
-    t -= 1;
-    num.textContent = Math.max(t,0);
-    ring.style.transition = 'stroke-dashoffset 1s linear';
-    ring.style.strokeDashoffset = circumference * ((10-t)/10);
-    if(t <= 0){
-      clearInterval(ringInterval);
-      hideIncomingOrder();
-      showToast('Request expired');
-    }
-  }, 1000);
 }
 function hideIncomingOrder(){
   document.getElementById('incomingBackdrop').classList.remove('show');
   navFabPulse(false);
-  clearInterval(ringInterval);
   incomingOrderId = null;
 }
 function navFabPulse(on){
